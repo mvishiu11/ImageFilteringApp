@@ -6,12 +6,25 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QColor>
+#include <QDebug>
 #include <QResizeEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow) {
     ui->setupUi(this);
+
+    // Create and add the functional editor dock
+    functionalDock = new FunctionalEditorDock(this);
+    addDockWidget(Qt::RightDockWidgetArea, functionalDock);
+
+    // Connect the signal that sends us the LUT
+    connect(functionalDock, &FunctionalEditorDock::functionApplied,
+            this, &MainWindow::onDockFunctionApplied);
+
+    // Add a menu item to show/hide the dock
+    auto viewMenu = menuBar()->addMenu("View");
+    viewMenu->addAction(functionalDock->toggleViewAction());
 }
 
 MainWindow::~MainWindow() {
@@ -56,6 +69,30 @@ void MainWindow::on_btnReset_clicked() {
     }
     // Revert to the original
     filteredImage = originalImage;
+    ui->sliderBrightness->setSliderPosition(0);
+    ui->sliderContrast->setSliderPosition(100);
+    ui->sliderGamma->setSliderPosition(100);
+    displayImages();
+}
+
+void MainWindow::onDockFunctionApplied(const QVector<int> &lut)
+{
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, "Warning", "No image to apply function to.");
+        return;
+    }
+
+    QImage result = filteredImage.convertToFormat(QImage::Format_RGB32);
+    for (int y = 0; y < result.height(); ++y) {
+        for (int x = 0; x < result.width(); ++x) {
+            QRgb pixel = result.pixel(x, y);
+            int r = lut[qRed(pixel)];
+            int g = lut[qGreen(pixel)];
+            int b = lut[qBlue(pixel)];
+            result.setPixel(x, y, qRgb(r, g, b));
+        }
+    }
+    filteredImage = result;
     displayImages();
 }
 
@@ -69,33 +106,36 @@ void MainWindow::on_btnInvert_clicked() {
     displayImages();
 }
 
-void MainWindow::on_btnBrightness_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+void MainWindow::on_sliderBrightness_valueChanged(int value)
+{
+    if (originalImage.isNull()) {
         return;
     }
 
-    filteredImage = Filters::adjustBrightness(filteredImage, 30);
+    filteredImage = Filters::adjustBrightness(originalImage, value);
+
     displayImages();
 }
 
-void MainWindow::on_btnContrast_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+void MainWindow::on_sliderContrast_valueChanged(int value)
+{
+    if (originalImage.isNull()) {
         return;
     }
 
-    filteredImage = Filters::adjustContrast(filteredImage, 1.2);
+    filteredImage = Filters::adjustContrast(originalImage, value / 100.0);
+
     displayImages();
 }
 
-void MainWindow::on_btnGamma_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+void MainWindow::on_sliderGamma_valueChanged(int value)
+{
+    if (originalImage.isNull()) {
         return;
     }
 
-    filteredImage = Filters::adjustGamma(filteredImage, 1.5);
+    filteredImage = Filters::adjustGamma(originalImage, value / 100.0);
+
     displayImages();
 }
 
