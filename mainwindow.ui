@@ -6,78 +6,209 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1200</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="btnLoad">
-    <property name="geometry">
-     <rect>
-      <x>130</x>
-      <y>480</y>
-      <width>88</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Load Image</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnInvert">
-    <property name="geometry">
-     <rect>
-      <x>500</x>
-      <y>480</y>
-      <width>88</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Invert</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelOriginal">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>160</y>
-      <width>211</width>
-      <height>191</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Original Image</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelFiltered">
-    <property name="geometry">
-     <rect>
-      <x>420</x>
-      <y>160</y>
-      <width>251</width>
-      <height>191</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Filtered Image</string>
-    </property>
-   </widget>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="1" column="1">
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="title">
+       <string>System</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="QPushButton" name="btnLoad">
+         <property name="text">
+          <string>Load Image</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="btnSave">
+         <property name="text">
+          <string>Save Image</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="btnReset">
+         <property name="text">
+          <string>ResetImage</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="1" rowspan="2">
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="title">
+       <string>Convolution Filters</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="QPushButton" name="btnBlur">
+         <property name="text">
+          <string>Blur</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="btnGauss">
+         <property name="text">
+          <string>Gaussian Blur</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="btnEdge">
+         <property name="text">
+          <string>Edge Detection</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QPushButton" name="btnEmboss">
+         <property name="text">
+          <string>Emboss</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnSharpen">
+         <property name="text">
+          <string>Sharpen</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="4" column="1" rowspan="3">
+     <widget class="QGroupBox" name="groupBox">
+      <property name="title">
+       <string>Functional Filters</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="QPushButton" name="btnInvert">
+         <property name="text">
+          <string>Invert</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="btnGamma">
+         <property name="text">
+          <string>Gamma</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnContrast">
+         <property name="text">
+          <string>Contrast</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="btnBrightness">
+         <property name="text">
+          <string>Brightness</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="4" column="0" rowspan="3">
+     <widget class="QGroupBox" name="groupBox_5">
+      <property name="title">
+       <string>Original</string>
+      </property>
+      <widget class="QLabel" name="labelOriginal">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>371</width>
+         <height>211</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Original Image</string>
+       </property>
+       <property name="scaledContents">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
+     </widget>
+    </item>
+    <item row="1" column="0" rowspan="3">
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="title">
+       <string>Filtered</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignmentFlag::AlignCenter</set>
+      </property>
+      <widget class="QLabel" name="labelFiltered">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>371</width>
+         <height>251</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Filtered Image</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
+     </widget>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1200</width>
      <height>23</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuImage_Filtering_App">
+    <property name="title">
+     <string>App</string>
+    </property>
+    <addaction name="actionClose"/>
+    <addaction name="actionLoad_Image"/>
+   </widget>
+   <addaction name="menuImage_Filtering_App"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="actionLoad_Image">
+   <property name="text">
+    <string>Load Image</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
