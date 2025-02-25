@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QColor>
+#include <QResizeEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -150,4 +151,10 @@ void MainWindow::displayImages() {
 
     ui->labelFiltered->setPixmap(QPixmap::fromImage(filteredImage)
                                      .scaled(ui->labelFiltered->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    displayImages();
 }
