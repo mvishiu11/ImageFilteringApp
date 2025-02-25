@@ -96,7 +96,6 @@ void MainWindow::onDockFunctionApplied(const QVector<int> &lut)
     displayImages();
 }
 
-// Invert Filter
 void MainWindow::on_btnInvert_clicked() {
     if (filteredImage.isNull()) {
         QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
@@ -184,7 +183,7 @@ void MainWindow::on_btnEmboss_clicked() {
     displayImages();
 }
 
-// Helper: Display images in labels
+// Helper to display images in labels
 void MainWindow::displayImages() {
     ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage)
                                      .scaled(ui->labelOriginal->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));

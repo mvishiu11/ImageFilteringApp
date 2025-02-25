@@ -5,14 +5,11 @@
 #include <algorithm>
 
 FunctionEditorCanvas::FunctionEditorCanvas(QWidget *parent)
-    : QWidget(parent),
-    m_dragIndex(-1)
+    : QWidget(parent), m_dragIndex(-1)
 {
     setFixedSize(256, 256);
 
-    m_points.append(QPoint(0, 255));
-    m_points.append(QPoint(255, 0));
-    m_points.clear();
+    // Default function: Inverted line from (0,255) to (255,0)
     m_points.append(QPoint(0, 255));
     m_points.append(QPoint(255, 0));
 }
@@ -22,34 +19,30 @@ QVector<int> FunctionEditorCanvas::buildLookupTable() const
     QVector<int> lut(256);
 
     for (int x = 0; x < 256; ++x) {
-        // If x is exactly at or below the first point
         if (x <= m_points[0].x()) {
             lut[x] = m_points[0].y();
             continue;
         }
-        // If x is exactly at or above the last point
         if (x >= m_points.last().x()) {
             lut[x] = m_points.last().y();
             continue;
         }
 
-        // Otherwise, find the segment in m_points that covers x
+        // Linear interpolation
         for (int i = 0; i < m_points.size() - 1; ++i) {
             QPoint p1 = m_points[i];
-            QPoint p2 = m_points[i+1];
+            QPoint p2 = m_points[i + 1];
             if (x >= p1.x() && x <= p2.x()) {
                 double t = double(x - p1.x()) / double(p2.x() - p1.x());
-                int y = p1.y() + int(t * (p2.y() - p1.y()));
-                lut[x] = y;
+                lut[x] = p1.y() + int(t * (p2.y() - p1.y()));
                 break;
             }
         }
     }
 
-    // Bound each LUT entry to [0..255]
+    // Clamp values to [0, 255]
     for (int &val : lut) {
-        if (val < 0) val = 0;
-        if (val > 255) val = 255;
+        val = std::clamp(val, 0, 255);
     }
 
     return lut;
@@ -60,23 +53,22 @@ void FunctionEditorCanvas::paintEvent(QPaintEvent * /*event*/)
     QPainter painter(this);
     painter.fillRect(rect(), Qt::white);
 
-    // Draw a grid
-    painter.setPen(QColor(220,220,220));
+    // Draw grid
+    painter.setPen(QColor(220, 220, 220));
     for (int i = 0; i <= 256; i += 64) {
         painter.drawLine(i, 0, i, 256);
         painter.drawLine(0, i, 256, i);
     }
 
-    // Draw the polyline
+    // Draw function curve
     painter.setPen(Qt::black);
     for (int i = 0; i < m_points.size() - 1; ++i) {
-        painter.drawLine(m_points[i], m_points[i+1]);
+        painter.drawLine(m_points[i], m_points[i + 1]);
     }
 
-    // Draw points
+    // Draw control points
     painter.setBrush(Qt::red);
-    for (int i = 0; i < m_points.size(); ++i) {
-        QPoint pt = m_points[i];
+    for (const auto &pt : m_points) {
         painter.drawEllipse(pt, 4, 4);
     }
 }
@@ -87,32 +79,25 @@ void FunctionEditorCanvas::mousePressEvent(QMouseEvent *event)
         int idx = findPointNearby(event->pos());
         if (idx >= 0) {
             m_dragIndex = idx;  // Start dragging
-        } else {
-            if (event->modifiers() & Qt::ShiftModifier) {
-                m_points.append(event->pos());
-                sortPointsByX();
-            }
+        } else if (event->modifiers() & Qt::ShiftModifier) {
+            m_points.append(event->pos());
+            sortPointsByX();
         }
-    }
-    else if (event->button() == Qt::RightButton) {
+    } else if (event->button() == Qt::RightButton) {
         int idx = findPointNearby(event->pos());
-        if (idx > 0 && idx < m_points.size()-1) {
-            m_points.remove(idx);
+        if (idx > 0 && idx < m_points.size() - 1) {
+            m_points.remove(idx);  // Remove point (except endpoints)
         }
     }
-
     update();
 }
 
 void FunctionEditorCanvas::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_dragIndex >= 0) {
-        // Move the point
-        QPoint newPos = event->pos();
-        m_points[m_dragIndex] = newPos;
+        m_points[m_dragIndex] = event->pos();
         constrainPoint(m_dragIndex);
         sortPointsByX();
-
         update();
     }
 }
@@ -126,8 +111,7 @@ void FunctionEditorCanvas::mouseReleaseEvent(QMouseEvent *event)
 int FunctionEditorCanvas::findPointNearby(const QPoint &pos, int radius) const
 {
     for (int i = 0; i < m_points.size(); ++i) {
-        QPoint diff = m_points[i] - pos;
-        if (diff.manhattanLength() <= radius) {
+        if ((m_points[i] - pos).manhattanLength() <= radius) {
             return i;
         }
     }
@@ -136,10 +120,8 @@ int FunctionEditorCanvas::findPointNearby(const QPoint &pos, int radius) const
 
 void FunctionEditorCanvas::sortPointsByX()
 {
-    // Sort by x, if tie, sort by y to keep stable
-    std::sort(m_points.begin(), m_points.end(), [](const QPoint &a, const QPoint &b){
-        if (a.x() == b.x()) return a.y() < b.y();
-        return a.x() < b.x();
+    std::sort(m_points.begin(), m_points.end(), [](const QPoint &a, const QPoint &b) {
+        return a.x() == b.x() ? a.y() < b.y() : a.x() < b.x();
     });
 }
 
@@ -147,24 +129,10 @@ void FunctionEditorCanvas::constrainPoint(int index)
 {
     if (index < 0 || index >= m_points.size()) return;
 
-    // clamp Y to [0..255], clamp X to [0..255]
-    // but also leftmost must be x=0, rightmost must be x=255
     QPoint &pt = m_points[index];
-    int x = pt.x();
-    int y = pt.y();
+    pt.setX(std::clamp(pt.x(), 0, 255));
+    pt.setY(std::clamp(pt.y(), 0, 255));
 
-    // clamp to range
-    x = std::max(0, std::min(x, 255));
-    y = std::max(0, std::min(y, 255));
-
-    if (index == 0) {
-        // leftmost point
-        x = 0; // force x=0
-    }
-    if (index == m_points.size() - 1) {
-        // rightmost point
-        x = 255; // force x=255
-    }
-    pt.setX(x);
-    pt.setY(y);
+    if (index == 0) pt.setX(0);                     // First point fixed at x=0
+    if (index == m_points.size() - 1) pt.setX(255); // Last point fixed at x=255
 }

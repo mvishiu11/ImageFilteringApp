@@ -14,39 +14,49 @@ class MainWindow : public QMainWindow {
 
 public:
     MainWindow(QWidget *parent = nullptr);
+
     ~MainWindow();
 
 protected:
+    /**
+     * @brief Handles window resize events to update image display.
+     * @param event The resize event.
+     */
     void resizeEvent(QResizeEvent *event) override;
 
 private slots:
-    // System buttons
-    void on_btnLoad_clicked();
-    void on_btnSave_clicked();
-    void on_btnReset_clicked();
+    // System actions
+    void on_btnLoad_clicked();  ///< Loads an image from disk.
+    void on_btnSave_clicked();  ///< Saves the processed image to disk.
+    void on_btnReset_clicked(); ///< Resets to the original image.
 
-    // Filter buttons
-    void on_btnInvert_clicked();
-    void on_sliderBrightness_valueChanged(int value);
-    void on_sliderContrast_valueChanged(int value);
-    void on_sliderGamma_valueChanged(int value);
-    void on_btnBlur_clicked();
-    void on_btnGauss_clicked();
-    void on_btnSharpen_clicked();
-    void on_btnEdge_clicked();
-    void on_btnEmboss_clicked();
+    // Filter actions
+    void on_btnInvert_clicked();                      ///< Applies inversion filter.
+    void on_sliderBrightness_valueChanged(int value); ///< Adjusts brightness.
+    void on_sliderContrast_valueChanged(int value);   ///< Adjusts contrast.
+    void on_sliderGamma_valueChanged(int value);      ///< Adjusts gamma.
+    void on_btnBlur_clicked();                        ///< Applies a blur filter.
+    void on_btnGauss_clicked();                       ///< Applies a Gaussian blur filter.
+    void on_btnSharpen_clicked();                     ///< Applies a sharpening filter.
+    void on_btnEdge_clicked();                        ///< Applies an edge detection filter.
+    void on_btnEmboss_clicked();                      ///< Applies an emboss filter.
 
-    // Functional editor custom function
+    /**
+     * @brief Applies a custom function to the image using a lookup table (LUT).
+     * @param lut The lookup table used for transformation.
+     */
     void onDockFunctionApplied(const QVector<int> &lut);
 
 private:
-    Ui::MainWindow *ui;
-    QImage originalImage;
-    QImage filteredImage;
+    Ui::MainWindow *ui;   ///< The UI instance.
+    QImage originalImage; ///< Stores the original loaded image.
+    QImage filteredImage; ///< Stores the processed image.
 
-    FunctionalEditorDock *functionalDock;
+    FunctionalEditorDock *functionalDock; ///< Dock for function-based transformations.
 
-    // Helper to display images
+    /**
+     * @brief Displays images in the appropriate UI labels.
+     */
     void displayImages();
 };
 
