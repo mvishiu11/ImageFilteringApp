@@ -24,6 +24,9 @@ protected:
      */
     void resizeEvent(QResizeEvent *event) override;
 
+signals:
+    void imageLoaded();
+
 private slots:
     // System actions
     void on_btnLoad_clicked();  ///< Loads an image from disk.

@@ -26,8 +26,14 @@ MainWindow::MainWindow(QWidget *parent)
     auto viewMenu = menuBar()->addMenu("View");
     viewMenu->addAction(functionalDock->toggleViewAction());
 
-    // Values for functional corrections
+    connect(ui->actionLoad_Image, &QAction::triggered, this, &MainWindow::on_btnLoad_clicked);
+    connect(ui->actionClose, &QAction::triggered, this, &MainWindow::close);
+    connect(ui->actionSave_Image, &QAction::triggered, this, &MainWindow::on_btnSave_clicked);
+    connect(ui->actionReset_Image, &QAction::triggered, this, &MainWindow::on_btnReset_clicked);
 
+    connect(this, &MainWindow::imageLoaded, this, [this](){
+        statusBar()->showMessage(tr("Image loaded"), 3000);
+    });
 }
 
 MainWindow::~MainWindow() {
@@ -48,6 +54,7 @@ void MainWindow::on_btnLoad_clicked() {
 
     filteredImage = originalImage; // Start with same as original
     displayImages();
+    emit imageLoaded();
 }
 
 void MainWindow::on_btnSave_clicked() {

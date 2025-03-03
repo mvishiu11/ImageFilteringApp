@@ -343,6 +343,8 @@
     </property>
     <addaction name="actionClose"/>
     <addaction name="actionLoad_Image"/>
+    <addaction name="actionSave_Image"/>
+    <addaction name="actionReset_Image"/>
    </widget>
    <addaction name="menuImage_Filtering_App"/>
   </widget>
@@ -361,6 +363,22 @@
    </property>
    <property name="text">
     <string>Load Image</string>
+   </property>
+  </action>
+  <action name="actionSave_Image">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::DriveHarddisk"/>
+   </property>
+   <property name="text">
+    <string>Save Image</string>
+   </property>
+  </action>
+  <action name="actionReset_Image">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::SystemReboot"/>
+   </property>
+   <property name="text">
+    <string>Reset Image</string>
    </property>
   </action>
  </widget>
