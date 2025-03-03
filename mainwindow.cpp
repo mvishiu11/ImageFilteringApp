@@ -25,6 +25,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Add a menu item to show/hide the dock
     auto viewMenu = menuBar()->addMenu("View");
     viewMenu->addAction(functionalDock->toggleViewAction());
+
+    // Values for functional corrections
+
 }
 
 MainWindow::~MainWindow() {
@@ -105,35 +108,46 @@ void MainWindow::on_btnInvert_clicked() {
     displayImages();
 }
 
-void MainWindow::on_sliderBrightness_valueChanged(int value)
+void MainWindow::on_btnBrightness_clicked()
 {
-    if (originalImage.isNull()) {
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
         return;
     }
 
-    filteredImage = Filters::adjustBrightness(originalImage, value);
+    filteredImage = Filters::adjustBrightness(filteredImage, ui->sliderBrightness->value());
 
     displayImages();
 }
 
-void MainWindow::on_sliderContrast_valueChanged(int value)
+void MainWindow::on_btnGenerateBrightness_clicked() {
+
+}
+
+void MainWindow::on_btnContrast_clicked()
 {
-    if (originalImage.isNull()) {
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
         return;
     }
 
-    filteredImage = Filters::adjustContrast(originalImage, value / 100.0);
+    filteredImage = Filters::adjustContrast(filteredImage, ui->sliderContrast->value() / 100.0);
 
     displayImages();
 }
 
-void MainWindow::on_sliderGamma_valueChanged(int value)
+void MainWindow::on_btnGenerateContrast_clicked() {
+
+}
+
+void MainWindow::on_btnGamma_clicked()
 {
-    if (originalImage.isNull()) {
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
         return;
     }
 
-    filteredImage = Filters::adjustGamma(originalImage, value / 100.0);
+    filteredImage = Filters::adjustGamma(filteredImage, ui->sliderGamma->value() / 100.0);
 
     displayImages();
 }
@@ -185,11 +199,12 @@ void MainWindow::on_btnEmboss_clicked() {
 
 // Helper to display images in labels
 void MainWindow::displayImages() {
-    ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage)
-                                     .scaled(ui->labelOriginal->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
-    ui->labelFiltered->setPixmap(QPixmap::fromImage(filteredImage)
-                                     .scaled(ui->labelFiltered->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    if (!originalImage.isNull()) {
+        ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage));
+    }
+    if (!filteredImage.isNull()) {
+        ui->labelFiltered->setPixmap(QPixmap::fromImage(filteredImage));
+    }
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)
