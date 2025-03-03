@@ -20,50 +20,32 @@ QImage applyConvolution3x3(const QImage &image, const int kernel[3][3],
     QImage src = image.convertToFormat(QImage::Format_RGB32);
     QImage dst(src.width(), src.height(), QImage::Format_RGB32);
 
-    // For safety, avoid dividing by 0
-    if (divisor == 0) divisor = 1;
+    if (divisor == 0)
+        divisor = 1;
 
-    // Loop over each pixel, skipping the borders to avoid going out of range
     for (int y = 0; y < src.height(); ++y) {
         for (int x = 0; x < src.width(); ++x) {
-            // Edges: replicate nearest pixel or skip?
-            // For simplicity, if we are at border, use original pixel
-            if (x == 0 || x == src.width() - 1 || y == 0 || y == src.height() - 1) {
-                dst.setPixel(x, y, src.pixel(x, y));
-                continue;
-            }
-
-            // Accumulators
             int sumR = 0, sumG = 0, sumB = 0;
-
-            // Apply the kernel
             for (int ky = -1; ky <= 1; ++ky) {
                 for (int kx = -1; kx <= 1; ++kx) {
                     int pixelX = x + kx;
                     int pixelY = y + ky;
-                    QRgb pixel = src.pixel(pixelX, pixelY);
-
-                    int red   = qRed(pixel);
-                    int green = qGreen(pixel);
-                    int blue  = qBlue(pixel);
-
                     int factor = kernel[ky + 1][kx + 1];
-                    sumR += red   * factor;
-                    sumG += green * factor;
-                    sumB += blue  * factor;
+                    if (pixelX >= 0 && pixelX < src.width() &&
+                        pixelY >= 0 && pixelY < src.height()) {
+                        QRgb pixel = src.pixel(pixelX, pixelY);
+                        sumR += qRed(pixel) * factor;
+                        sumG += qGreen(pixel) * factor;
+                        sumB += qBlue(pixel) * factor;
+                    }
                 }
             }
-
-            // Divide, clip
             int outR = std::clamp((sumR / divisor) + offset, 0, 255);
             int outG = std::clamp((sumG / divisor) + offset, 0, 255);
             int outB = std::clamp((sumB / divisor) + offset, 0, 255);
-
-            // Set the new pixel
             dst.setPixel(x, y, qRgb(outR, outG, outB));
         }
     }
-
     return dst;
 }
 
