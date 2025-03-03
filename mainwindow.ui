@@ -245,6 +245,13 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
+           <widget class="QPushButton" name="btnGenerateInvert">
+            <property name="text">
+             <string>Generate Functional</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="btnInvert">
             <property name="text">
              <string>Invert</string>
@@ -341,11 +348,17 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionClose">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::GoHome"/>
+   </property>
    <property name="text">
     <string>Close</string>
    </property>
   </action>
   <action name="actionLoad_Image">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::Computer"/>
+   </property>
    <property name="text">
     <string>Load Image</string>
    </property>

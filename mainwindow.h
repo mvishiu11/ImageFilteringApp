@@ -32,13 +32,11 @@ private slots:
 
     // Filter actions
     void on_btnInvert_clicked();                      ///< Applies inversion filter.
-    //void on_sliderBrightness_valueChanged(int value); ///< Adjusts brightness.
+    void on_btnGenerateInvert_clicked();              ///< Generate invert functional.
     void on_btnBrightness_clicked();                  ///< Apply brightness correction.
     void on_btnGenerateBrightness_clicked();          ///< Generate brightness functional.
-    //void on_sliderContrast_valueChanged(int value);   ///< Adjusts contrast.
     void on_btnContrast_clicked();                    ///< Apply contrast correction.
     void on_btnGenerateContrast_clicked();            ///< Generate contrast functional.
-    //void on_sliderGamma_valueChanged(int value);      ///< Adjusts gamma.
     void on_btnGamma_clicked();                       ///< Apply gamma correction.
     void on_btnBlur_clicked();                        ///< Applies a blur filter.
     void on_btnGauss_clicked();                       ///< Applies a Gaussian blur filter.

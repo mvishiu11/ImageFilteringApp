@@ -108,6 +108,11 @@ void MainWindow::on_btnInvert_clicked() {
     displayImages();
 }
 
+void MainWindow::on_btnGenerateInvert_clicked()
+{
+    functionalDock->setInitialInvertCurve();
+}
+
 void MainWindow::on_btnBrightness_clicked()
 {
     if (filteredImage.isNull()) {
@@ -120,8 +125,10 @@ void MainWindow::on_btnBrightness_clicked()
     displayImages();
 }
 
-void MainWindow::on_btnGenerateBrightness_clicked() {
-
+void MainWindow::on_btnGenerateBrightness_clicked()
+{
+    int delta = ui->sliderBrightness->value();
+    functionalDock->setInitialBrightnessCurve(delta, 6);
 }
 
 void MainWindow::on_btnContrast_clicked()
@@ -137,7 +144,8 @@ void MainWindow::on_btnContrast_clicked()
 }
 
 void MainWindow::on_btnGenerateContrast_clicked() {
-
+    double factor = ui->sliderContrast->value() / 100.0;
+    functionalDock->setInitialContrastCurve(factor, 6);
 }
 
 void MainWindow::on_btnGamma_clicked()

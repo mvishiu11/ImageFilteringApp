@@ -18,6 +18,10 @@ class FunctionalEditorDock : public QDockWidget
 public:
     explicit FunctionalEditorDock(QWidget *parent = nullptr);
 
+    void setInitialBrightnessCurve(int delta, int samplePoints = 3);
+    void setInitialContrastCurve(double factor, int samplePoints = 3);
+    void setInitialInvertCurve();
+
 signals:
     /**
      * @brief functionApplied
@@ -28,6 +32,7 @@ signals:
 
 private slots:
     void onApplyClicked();
+    void onResetClicked();
 
 private:
     /**
