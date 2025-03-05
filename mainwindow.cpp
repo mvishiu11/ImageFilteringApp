@@ -14,17 +14,38 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
-    // Create and add the functional editor dock
-    functionalDock = new FunctionalEditorDock(this);
-    addDockWidget(Qt::RightDockWidgetArea, functionalDock);
+    filterEditorTabs = new QTabWidget(this);
+
+    // Create the functional editor
+    functionalEditor = new FunctionalEditorDock(this);
+    // Create the convolution editor
+    convolutionEditor = new ConvolutionEditorWidget(this);
+
+    // Disable dock features for prettier UI
+    functionalEditor->setFeatures(functionalEditor->features()
+        & ~QDockWidget::DockWidgetFloatable & ~QDockWidget::DockWidgetClosable);
+    convolutionEditor->setFeatures(convolutionEditor->features()
+        & ~QDockWidget::DockWidgetFloatable & ~QDockWidget::DockWidgetClosable);
+
+    // Add both to the tab widget
+    filterEditorTabs->addTab(functionalEditor, tr("Functional Editor"));
+    filterEditorTabs->addTab(convolutionEditor, tr("Convolution Editor"));
+
+    // Create a dock widget and set the tab widget as its central widget
+    QDockWidget *filterDock = new QDockWidget(tr("Filter Editor"), this);
+    filterDock->setWidget(filterEditorTabs);
+    addDockWidget(Qt::RightDockWidgetArea, filterDock);
 
     // Connect the signal that sends us the LUT
-    connect(functionalDock, &FunctionalEditorDock::functionApplied,
+    connect(functionalEditor, &FunctionalEditorDock::functionApplied,
             this, &MainWindow::onDockFunctionApplied);
 
     // Add a menu item to show/hide the dock
     auto viewMenu = menuBar()->addMenu("View");
-    viewMenu->addAction(functionalDock->toggleViewAction());
+    viewMenu->addAction(filterDock->toggleViewAction());
+
+    connect(convolutionEditor, &ConvolutionEditorWidget::applyConvolutionFilter,
+        this, &MainWindow::onApplyConvolutionFilter);
 
     connect(ui->actionLoad_Image, &QAction::triggered, this, &MainWindow::on_btnLoad_clicked);
     connect(ui->actionClose, &QAction::triggered, this, &MainWindow::close);
@@ -106,6 +127,21 @@ void MainWindow::onDockFunctionApplied(const QVector<int> &lut)
     displayImages();
 }
 
+
+void MainWindow::onApplyConvolutionFilter()
+{
+    // Get the convolution parameters.
+    ConvolutionEditorWidget* convEditor = convolutionEditor;
+    QVector<QVector<int>> kernel = convEditor->getKernel();
+    int divisor = convEditor->getDivisor();
+    int offset = convEditor->getOffset();
+    QPair<int, int> anchor = convEditor->getAnchor();
+
+    // Apply the convolution using the generic helper.
+    filteredImage = Filters::applyConvolution(filteredImage, kernel, divisor, offset, anchor.first, anchor.second);
+    displayImages();
+}
+
 void MainWindow::on_btnInvert_clicked() {
     if (filteredImage.isNull()) {
         QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
@@ -117,7 +153,7 @@ void MainWindow::on_btnInvert_clicked() {
 
 void MainWindow::on_btnGenerateInvert_clicked()
 {
-    functionalDock->setInitialInvertCurve();
+    functionalEditor->setInitialInvertCurve();
 }
 
 void MainWindow::on_btnBrightness_clicked()
@@ -135,7 +171,7 @@ void MainWindow::on_btnBrightness_clicked()
 void MainWindow::on_btnGenerateBrightness_clicked()
 {
     int delta = ui->sliderBrightness->value();
-    functionalDock->setInitialBrightnessCurve(delta, 6);
+    functionalEditor->setInitialBrightnessCurve(delta, 6);
 }
 
 void MainWindow::on_btnContrast_clicked()
@@ -152,7 +188,7 @@ void MainWindow::on_btnContrast_clicked()
 
 void MainWindow::on_btnGenerateContrast_clicked() {
     double factor = ui->sliderContrast->value() / 100.0;
-    functionalDock->setInitialContrastCurve(factor, 6);
+    functionalEditor->setInitialContrastCurve(factor, 6);
 }
 
 void MainWindow::on_btnGamma_clicked()

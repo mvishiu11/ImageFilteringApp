@@ -7,9 +7,9 @@
 FunctionEditorCanvas::FunctionEditorCanvas(QWidget *parent)
     : QWidget(parent), m_dragIndex(-1)
 {
+    // Set a fixed size of 256x256 pixels.
     setFixedSize(256, 256);
-    // Initialize with the identity function in function space:
-    // f(x) = x -> points: (0,0) and (255,255)
+    // Initialize with the identity function: f(x)= x (0 maps to 0, 255 maps to 255).
     m_points.clear();
     m_points.append(QPoint(0, 0));
     m_points.append(QPoint(255, 255));
@@ -30,7 +30,7 @@ QVector<int> FunctionEditorCanvas::buildLookupTable() const
         }
         for (int i = 0; i < m_points.size() - 1; ++i) {
             QPoint p1 = m_points[i];
-            QPoint p2 = m_points[i+1];
+            QPoint p2 = m_points[i + 1];
             if (x >= p1.x() && x <= p2.x()) {
                 double t = double(x - p1.x()) / double(p2.x() - p1.x());
                 int y = p1.y() + int(t * (p2.y() - p1.y()));
@@ -45,12 +45,20 @@ QVector<int> FunctionEditorCanvas::buildLookupTable() const
     return lut;
 }
 
+void FunctionEditorCanvas::resetPoints()
+{
+    m_points.clear();
+    m_points.append(QPoint(0, 0));
+    m_points.append(QPoint(255, 255));
+    update();
+}
+
 void FunctionEditorCanvas::setCurveForBrightness(int delta, int samplePoints)
 {
     QVector<QPoint> pts;
-    if (samplePoints < 2) {
+    if (samplePoints < 2)
         samplePoints = 2;
-    }
+    // f(x)= clamp(x + delta, 0, 255)
     for (int i = 0; i < samplePoints; ++i) {
         int x = i * 255 / (samplePoints - 1);
         int y = qBound(0, x + delta, 255);
@@ -63,9 +71,9 @@ void FunctionEditorCanvas::setCurveForBrightness(int delta, int samplePoints)
 void FunctionEditorCanvas::setCurveForContrast(double factor, int samplePoints)
 {
     QVector<QPoint> pts;
-    if (samplePoints < 2) {
+    if (samplePoints < 2)
         samplePoints = 2;
-    }
+    // f(x)= clamp(128 + (x-128)*factor, 0, 255)
     for (int i = 0; i < samplePoints; ++i) {
         int x = i * 255 / (samplePoints - 1);
         int y = qBound(0, 128 + int((x - 128) * factor), 255);
@@ -86,25 +94,25 @@ void FunctionEditorCanvas::setCurveForInvert()
 void FunctionEditorCanvas::paintEvent(QPaintEvent * /*event*/)
 {
     QPainter painter(this);
+    // Fill background.
     painter.fillRect(rect(), Qt::white);
 
-    // Draw a grid
-    painter.setPen(QColor(220,220,220));
+    // Draw grid lines.
+    painter.setPen(QColor(220, 220, 220));
     for (int i = 0; i <= 256; i += 64) {
         painter.drawLine(i, 0, i, height());
         painter.drawLine(0, i, width(), i);
     }
 
-    // Draw the polyline
+    // Draw the polyline connecting control points.
     painter.setPen(Qt::black);
     for (int i = 0; i < m_points.size() - 1; ++i) {
-        // Convert function coordinates to widget coordinates
         QPoint p1(m_points[i].x(), height() - m_points[i].y());
-        QPoint p2(m_points[i+1].x(), height() - m_points[i+1].y());
+        QPoint p2(m_points[i + 1].x(), height() - m_points[i + 1].y());
         painter.drawLine(p1, p2);
     }
 
-    // Draw control points
+    // Draw control points as red circles.
     painter.setBrush(Qt::red);
     for (const QPoint &pt : m_points) {
         QPoint widgetPt(pt.x(), height() - pt.y());
@@ -115,7 +123,7 @@ void FunctionEditorCanvas::paintEvent(QPaintEvent * /*event*/)
 void FunctionEditorCanvas::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        // Convert widget position to function space
+        // Convert the widget coordinate to function space.
         QPoint funcPos(event->pos().x(), height() - event->pos().y());
         int idx = findPointNearby(funcPos);
         if (idx >= 0) {
@@ -127,7 +135,7 @@ void FunctionEditorCanvas::mousePressEvent(QMouseEvent *event)
     } else if (event->button() == Qt::RightButton) {
         QPoint funcPos(event->pos().x(), height() - event->pos().y());
         int idx = findPointNearby(funcPos);
-        if (idx > 0 && idx < m_points.size()-1) {
+        if (idx > 0 && idx < m_points.size() - 1) {
             m_points.remove(idx);
         }
     }
@@ -162,7 +170,7 @@ int FunctionEditorCanvas::findPointNearby(const QPoint &funcPos, int radius) con
 
 void FunctionEditorCanvas::sortPointsByX()
 {
-    std::sort(m_points.begin(), m_points.end(), [](const QPoint &a, const QPoint &b){
+    std::sort(m_points.begin(), m_points.end(), [](const QPoint &a, const QPoint &b) {
         return a.x() < b.x();
     });
 }
@@ -174,18 +182,11 @@ void FunctionEditorCanvas::constrainPoint(int index)
     QPoint &pt = m_points[index];
     int x = qBound(0, pt.x(), 255);
     int y = qBound(0, pt.y(), 255);
+    // Fix first and last points.
     if (index == 0)
         x = 0;
     if (index == m_points.size() - 1)
         x = 255;
     pt.setX(x);
     pt.setY(y);
-}
-
-void FunctionEditorCanvas::resetPoints()
-{
-    m_points.clear();
-    m_points.append(QPoint(0, 0));
-    m_points.append(QPoint(255, 255));
-    update();
 }

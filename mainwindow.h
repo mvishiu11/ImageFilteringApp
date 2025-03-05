@@ -3,7 +3,9 @@
 
 #include <QMainWindow>
 #include <QImage>
+#include <QTabWidget>
 #include "FunctionalEditorDock.h"
+#include "ConvolutionEditorWidget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -53,12 +55,16 @@ private slots:
      */
     void onDockFunctionApplied(const QVector<int> &lut);
 
+    void onApplyConvolutionFilter();
+
 private:
     Ui::MainWindow *ui;   ///< The UI instance.
     QImage originalImage; ///< Stores the original loaded image.
     QImage filteredImage; ///< Stores the processed image.
 
-    FunctionalEditorDock *functionalDock; ///< Dock for function-based transformations.
+    QTabWidget *filterEditorTabs;
+    FunctionalEditorDock *functionalEditor;
+    ConvolutionEditorWidget *convolutionEditor;
 
     /**
      * @brief Displays images in the appropriate UI labels.
