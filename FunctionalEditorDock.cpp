@@ -4,28 +4,35 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QToolButton>
+#include <QAbstractSpinBox>
+#include <QLabel>
 
 FunctionalEditorDock::FunctionalEditorDock(QWidget *parent)
     : QDockWidget(parent),
     m_canvas(new FunctionEditorCanvas(this))
 {
-    //setWindowTitle(tr("Functional Editor"));
+    setWindowTitle(tr("Functional Editor"));
 
     QWidget *dockContent = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(dockContent);
     layout->setContentsMargins(10, 10, 10, 10);
     layout->setSpacing(10);
 
-    // Add the 256x256 canvas.
-    layout->addWidget(m_canvas);
+    // --- The 256x256 canvas ---
+    QHBoxLayout *canvasLayout = new QHBoxLayout;
+    canvasLayout->addStretch();
+    canvasLayout->addWidget(m_canvas);
+    canvasLayout->addStretch();
+    layout->addLayout(canvasLayout);
 
-    // Create the Apply button.
+    // --- Apply and Reset Buttons ---
     QPushButton *btnApply = new QPushButton(tr("Apply"), dockContent);
     btnApply->setToolTip(tr("Apply the current function to the image"));
     connect(btnApply, &QPushButton::clicked, this, &FunctionalEditorDock::onApplyClicked);
     layout->addWidget(btnApply);
 
-    // Create the Reset button.
     QPushButton *btnReset = new QPushButton(tr("Reset"), dockContent);
     btnReset->setToolTip(tr("Reset the function to the default identity"));
     connect(btnReset, &QPushButton::clicked, this, &FunctionalEditorDock::onResetClicked);

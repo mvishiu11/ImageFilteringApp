@@ -1,0 +1,127 @@
+/* Global styling for all widgets */
+QWidget {
+    background-color: #f7f7f7;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    font-size: 10pt;
+}
+
+/* Main window background */
+QMainWindow {
+    background-color: #f7f7f7;
+}
+
+/* QPushButton styling*/
+QPushButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #009eff, stop:1 #0078d7);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+QPushButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #008ae6, stop:1 #006bb3);
+}
+QPushButton:pressed {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #006bb3, stop:1 #005a9e);
+}
+
+/* QToolButton styling */
+QToolButton {
+    background-color: #0078d7;
+    border: 1px solid #006bb3;
+    padding: 4px 10px;
+    border-radius: 3px;
+    color: white;
+}
+QToolButton:hover {
+    background-color: #006bb3;
+}
+
+/* QTableWidget styling */
+QTableWidget {
+    background-color: white;
+    alternate-background-color: #f0f0f0;
+    gridline-color: #ddd;
+    border: 1px solid #ddd;
+}
+QTableWidget::item {
+    padding: 4px;
+}
+QHeaderView::section {
+    background-color: #0078d7;
+    color: white;
+    padding: 4px;
+    border: 1px solid #006bb3;
+}
+
+/* QSpinBox and QLineEdit styling */
+QSpinBox, QLineEdit {
+    background-color: white;
+    color: #444444;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+QSpinBox::up-button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    image: url(:/icons/icons/chevron-up.svg);
+}
+QSpinBox::down-button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    image: url(:/icons/icons/chevron-down.svg);
+}
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background-color: #e0e0e0;
+}
+
+/* QMenu styling */
+QMenu {
+    background-color: white;
+    color: #444444;
+    border: 1px solid #ddd;
+}
+QMenu::item {
+    padding: 5px 10px;
+    background-color: transparent;
+}
+QMenu::item:selected {
+    background-color: #0078d7;
+    color: white;
+}
+
+/* QDockWidget styling */
+QDockWidget {
+    border: 1px solid #ddd;
+}
+QDockWidget::title {
+    text-align: center;
+    background-color: #0078d7;
+    padding: 4px;
+    font-weight: bold;
+    color: white;
+}
+
+/* QCheckBox styling */
+QCheckBox {
+    spacing: 5px;
+}
+QCheckBox::indicator {
+    width: 13px;
+    height: 13px;
+}
+QCheckBox::indicator:unchecked {
+    border: 1px solid #ccc;
+    background: white;
+}
+QCheckBox::indicator:checked {
+    border: 1px solid #0078d7;
+    background: #0078d7;
+    image: url(:/icons/icons/check.svg);
+}
+
+/* QLabel styling */
+QLabel {
+    color: #444444;
+}
