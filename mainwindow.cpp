@@ -268,6 +268,28 @@ void MainWindow::on_btnMedian_clicked()
     displayImages();
 }
 
+void MainWindow::on_btnErosion_clicked()
+{
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+
+    filteredImage = Filters::applyErosionFilter(filteredImage, 3);
+    displayImages();
+}
+
+void MainWindow::on_btnDilation_clicked()
+{
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+
+    filteredImage = Filters::applyDilationFilter(filteredImage, 3);
+    displayImages();
+}
+
 void MainWindow::displayImages() {
     if (!originalImage.isNull()) {
         ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage));

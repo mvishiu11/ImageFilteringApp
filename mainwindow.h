@@ -49,6 +49,8 @@ private slots:
     void on_btnEdge_clicked();                        ///< Applies an edge detection filter.
     void on_btnEmboss_clicked();                      ///< Applies an emboss filter.
     void on_btnMedian_clicked();                      ///< Applies median filter.
+    void on_btnErosion_clicked();                     ///< Applies morhpological erosion.
+    void on_btnDilation_clicked();                    ///< Applies morphological dilation.
 
     /**
      * @brief Applies a custom function to the image using a lookup table (LUT).

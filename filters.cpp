@@ -195,7 +195,7 @@ namespace Filters
     }
 
     //---------------------------//
-    // Median FIlter Convolution //
+    // Non-Linear Convolution    //
     //---------------------------//
 
     QImage applyMedianFilter(const QImage &image, int kernelSize)
@@ -221,6 +221,68 @@ namespace Filters
             }
         }
         return result;
+    }
+
+    QImage applyErosionFilter(const QImage &image, int kernelSize)
+    {
+        if (kernelSize % 2 == 0) {
+            kernelSize++;
+        }
+        int radius = kernelSize / 2;
+
+        QImage src = image.convertToFormat(QImage::Format_RGB32);
+        QImage dst(src.size(), QImage::Format_RGB32);
+        int width = src.width();
+        int height = src.height();
+
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                int minR = 255, minG = 255, minB = 255;
+                for (int dy = -radius; dy <= radius; ++dy) {
+                    int ny = std::min(std::max(y + dy, 0), height - 1);
+                    for (int dx = -radius; dx <= radius; ++dx) {
+                        int nx = std::min(std::max(x + dx, 0), width - 1);
+                        QColor pixelColor(src.pixel(nx, ny));
+                        minR = std::min(minR, pixelColor.red());
+                        minG = std::min(minG, pixelColor.green());
+                        minB = std::min(minB, pixelColor.blue());
+                    }
+                }
+                dst.setPixel(x, y, qRgb(minR, minG, minB));
+            }
+        }
+        return dst;
+    }
+
+    QImage applyDilationFilter(const QImage &image, int kernelSize)
+    {
+        if (kernelSize % 2 == 0) {
+            kernelSize++;
+        }
+        int radius = kernelSize / 2;
+
+        QImage src = image.convertToFormat(QImage::Format_RGB32);
+        QImage dst(src.size(), QImage::Format_RGB32);
+        int width = src.width();
+        int height = src.height();
+
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                int maxR = 0, maxG = 0, maxB = 0;
+                for (int dy = -radius; dy <= radius; ++dy) {
+                    int ny = std::min(std::max(y + dy, 0), height - 1);
+                    for (int dx = -radius; dx <= radius; ++dx) {
+                        int nx = std::min(std::max(x + dx, 0), width - 1);
+                        QColor pixelColor(src.pixel(nx, ny));
+                        maxR = std::max(maxR, pixelColor.red());
+                        maxG = std::max(maxG, pixelColor.green());
+                        maxB = std::max(maxB, pixelColor.blue());
+                    }
+                }
+                dst.setPixel(x, y, qRgb(maxR, maxG, maxB));
+            }
+        }
+        return dst;
     }
 
 } // namespace Filters

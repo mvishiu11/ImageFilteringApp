@@ -100,6 +100,22 @@ namespace Filters {
      */
     QImage applyMedianFilter(const QImage &image, int kernelSize = 3);
 
+    /**
+     * @brief Applies a erosion filter to a grayscale image.
+     * @param src The input grayscale image.
+     * @param kernelSize The size of the erosion filter window (must be odd).
+     * @return A new QImage with the erosion filter applied.
+     */
+    QImage applyErosionFilter(const QImage &image, int kernelSize = 3);
+
+    /**
+     * @brief Applies a dilation filter to a grayscale image.
+     * @param src The input grayscale image.
+     * @param kernelSize The size of the dilation filter window (must be odd).
+     * @return A new QImage with the dilation filter applied.
+     */
+    QImage applyDilationFilter(const QImage &image, int kernelSize = 3);
+
 } // namespace Filters
 
 #endif // FILTERS_H
