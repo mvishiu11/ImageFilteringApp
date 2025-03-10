@@ -71,10 +71,24 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="btnEdge">
+       <item row="6" column="0">
+        <widget class="QPushButton" name="btnErosion">
          <property name="text">
-          <string>Edge Detection</string>
+          <string>Erosion</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QPushButton" name="btnMedian">
+         <property name="text">
+          <string>Median</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnSharpen">
+         <property name="text">
+          <string>Sharpen</string>
          </property>
         </widget>
        </item>
@@ -85,10 +99,17 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="btnSharpen">
+       <item row="3" column="0">
+        <widget class="QPushButton" name="btnEdge">
          <property name="text">
-          <string>Sharpen</string>
+          <string>Edge Detection</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QPushButton" name="btnDilation">
+         <property name="text">
+          <string>Dilation</string>
          </property>
         </widget>
        </item>

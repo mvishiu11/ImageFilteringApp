@@ -17,9 +17,7 @@
 ConvolutionEditorWidget::ConvolutionEditorWidget(QWidget *parent)
     : QDockWidget(parent)
 {
-    // Set title and disable floatable.
     setWindowTitle(tr("Convolution Editor"));
-    setFeatures(features() & ~QDockWidget::DockWidgetFloatable);
 
     QWidget *dockContent = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(dockContent);
@@ -64,7 +62,7 @@ ConvolutionEditorWidget::ConvolutionEditorWidget(QWidget *parent)
     tableKernel->horizontalHeader()->setVisible(false);
     tableKernel->verticalHeader()->setVisible(false);
     tableKernel->setAlternatingRowColors(true);
-    updateKernelTable(3, 3);  // Populate with default values.
+    updateKernelTable(3, 3);
     mainLayout->addWidget(tableKernel);
     connect(tableKernel, &QTableWidget::itemChanged,
             this, &ConvolutionEditorWidget::onTableItemChanged);

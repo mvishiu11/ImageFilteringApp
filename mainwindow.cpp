@@ -130,14 +130,12 @@ void MainWindow::onDockFunctionApplied(const QVector<int> &lut)
 
 void MainWindow::onApplyConvolutionFilter()
 {
-    // Get the convolution parameters.
     ConvolutionEditorWidget* convEditor = convolutionEditor;
     QVector<QVector<int>> kernel = convEditor->getKernel();
     int divisor = convEditor->getDivisor();
     int offset = convEditor->getOffset();
     QPair<int, int> anchor = convEditor->getAnchor();
 
-    // Apply the convolution using the generic helper.
     filteredImage = Filters::applyConvolution(filteredImage, kernel, divisor, offset, anchor.first, anchor.second);
     displayImages();
 }
@@ -248,7 +246,50 @@ void MainWindow::on_btnEmboss_clicked() {
     displayImages();
 }
 
-// Helper to display images in labels
+void MainWindow::on_btnMedian_clicked()
+{
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+
+    if (filteredImage.format() != QImage::Format_Grayscale8) {
+        int ret = QMessageBox::question(this, tr("Convert to Grayscale?"),
+                                        tr("The image is not in grayscale. Would you like to convert it to grayscale first?"),
+                                        QMessageBox::Yes | QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            filteredImage = filteredImage.convertToFormat(QImage::Format_Grayscale8);
+        } else {
+            return;
+        }
+    }
+
+    filteredImage = Filters::applyMedianFilter(filteredImage, 3);
+    displayImages();
+}
+
+void MainWindow::on_btnErosion_clicked()
+{
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+
+    filteredImage = Filters::applyErosionFilter(filteredImage, 3);
+    displayImages();
+}
+
+void MainWindow::on_btnDilation_clicked()
+{
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+
+    filteredImage = Filters::applyDilationFilter(filteredImage, 3);
+    displayImages();
+}
+
 void MainWindow::displayImages() {
     if (!originalImage.isNull()) {
         ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage));
