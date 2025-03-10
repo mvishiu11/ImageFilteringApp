@@ -92,6 +92,14 @@ namespace Filters {
      */
     QImage emboss3x3(const QImage &image);
 
+    /**
+     * @brief Applies a median filter to a grayscale image.
+     * @param src The input grayscale image.
+     * @param kernelSize The size of the median filter window (must be odd).
+     * @return A new QImage with the median filter applied.
+     */
+    QImage applyMedianFilter(const QImage &image, int kernelSize = 3);
+
 } // namespace Filters
 
 #endif // FILTERS_H

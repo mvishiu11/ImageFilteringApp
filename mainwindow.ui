@@ -57,6 +57,20 @@
        <set>Qt::AlignmentFlag::AlignCenter</set>
       </property>
       <layout class="QGridLayout" name="gridLayout_4">
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnSharpen">
+         <property name="text">
+          <string>Sharpen</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QPushButton" name="btnEmboss">
+         <property name="text">
+          <string>Emboss</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QPushButton" name="btnBlur">
          <property name="text">
@@ -78,17 +92,10 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QPushButton" name="btnEmboss">
+       <item row="5" column="0">
+        <widget class="QPushButton" name="btnMedian">
          <property name="text">
-          <string>Emboss</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="btnSharpen">
-         <property name="text">
-          <string>Sharpen</string>
+          <string>Median</string>
          </property>
         </widget>
        </item>

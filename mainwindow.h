@@ -48,6 +48,7 @@ private slots:
     void on_btnSharpen_clicked();                     ///< Applies a sharpening filter.
     void on_btnEdge_clicked();                        ///< Applies an edge detection filter.
     void on_btnEmboss_clicked();                      ///< Applies an emboss filter.
+    void on_btnMedian_clicked();                      ///< Applies median filter.
 
     /**
      * @brief Applies a custom function to the image using a lookup table (LUT).

@@ -194,4 +194,33 @@ namespace Filters
         return dst;
     }
 
+    //---------------------------//
+    // Median FIlter Convolution //
+    //---------------------------//
+
+    QImage applyMedianFilter(const QImage &image, int kernelSize)
+    {
+        QImage result(image.size(), image.format());
+        int radius = kernelSize / 2;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                QVector<int> window;
+                for (int j = -radius; j <= radius; ++j) {
+                    for (int i = -radius; i <= radius; ++i) {
+                        int nx = x + i;
+                        int ny = y + j;
+                        if (nx >= 0 && nx < image.width() && ny >= 0 && ny < image.height()) {
+                            int intensity = qGray(image.pixel(nx, ny));
+                            window.append(intensity);
+                        }
+                    }
+                }
+                std::sort(window.begin(), window.end());
+                int median = window[window.size() / 2];
+                result.setPixel(x, y, qRgb(median, median, median));
+            }
+        }
+        return result;
+    }
+
 } // namespace Filters
