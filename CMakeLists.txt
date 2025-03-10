@@ -16,15 +16,15 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 set(PROJECT_SOURCES
     src/main.cpp
     src/mainwindow.cpp
-    include/mainwindow.h
+    src/mainwindow.h
     src/mainwindow.ui
-    include/filters.h
+    src/filters.h
     src/filters.cpp
-    include/FunctionalEditorDock.h
+    src/FunctionalEditorDock.h
     src/FunctionalEditorDock.cpp
-    include/FunctionEditorCanvas.h
+    src/FunctionEditorCanvas.h
     src/FunctionEditorCanvas.cpp
-    include/ConvolutionEditorWidget.h
+    src/ConvolutionEditorWidget.h
     src/ConvolutionEditorWidget.cpp
     src/style.qss
     src/resources.qrc
