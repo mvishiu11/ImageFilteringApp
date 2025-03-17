@@ -12,18 +12,20 @@
  * round a channel value up or down based on its fractional quantization error.
  *
  * @param image The input color QImage.
- * @param thresholdMapSize The size of the threshold matrix (allowed values: 2, 3, 4, or 6).
+ * @param thresholdMapSize The size of the threshold matrix (allowed values: 2,
+ * 3, 4, or 6).
  * @param levelsPerChannel The number of quantization levels per channel.
  * @return A new QImage with the ordered dithering applied.
  */
-QImage applyOrderedDithering(const QImage &image, int thresholdMapSize, int levelsPerChannel);
+QImage applyOrderedDithering(const QImage &image, int thresholdMapSize,
+                             int levelsPerChannel);
 
 /**
  * @brief Applies the Popularity Color Quantization algorithm to a color image.
  *
- * This algorithm selects the most frequent colors in the image (up to the specified number)
- * and then maps each pixel to the nearest color in the resulting palette (using Euclidean
- * distance in RGB space).
+ * This algorithm selects the most frequent colors in the image (up to the
+ * specified number) and then maps each pixel to the nearest color in the
+ * resulting palette (using Euclidean distance in RGB space).
  *
  * @param image The input color QImage.
  * @param numColors The number of colors to reduce the image to.

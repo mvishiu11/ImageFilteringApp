@@ -1,351 +1,353 @@
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
 #include "filters.h"
+#include "ui_mainwindow.h"
 
+#include <QColor>
+#include <QDebug>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPixmap>
-#include <QColor>
-#include <QDebug>
 #include <QResizeEvent>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow) {
-    ui->setupUi(this);
+    : QMainWindow(parent), ui(new Ui::MainWindow) {
+  ui->setupUi(this);
 
-    filterEditorTabs = new QTabWidget(this);
+  filterEditorTabs = new QTabWidget(this);
 
-    // Create the functional editor
-    functionalEditor = new FunctionalEditorDock(this);
-    // Create the convolution editor
-    convolutionEditor = new ConvolutionEditorWidget(this);
+  // Create the functional editor
+  functionalEditor = new FunctionalEditorDock(this);
+  // Create the convolution editor
+  convolutionEditor = new ConvolutionEditorWidget(this);
 
-    // Disable dock features for prettier UI
-    functionalEditor->setFeatures(functionalEditor->features()
-        & ~QDockWidget::DockWidgetFloatable & ~QDockWidget::DockWidgetClosable);
-    convolutionEditor->setFeatures(convolutionEditor->features()
-        & ~QDockWidget::DockWidgetFloatable & ~QDockWidget::DockWidgetClosable);
+  // Disable dock features for prettier UI
+  functionalEditor->setFeatures(functionalEditor->features() &
+                                ~QDockWidget::DockWidgetFloatable &
+                                ~QDockWidget::DockWidgetClosable);
+  convolutionEditor->setFeatures(convolutionEditor->features() &
+                                 ~QDockWidget::DockWidgetFloatable &
+                                 ~QDockWidget::DockWidgetClosable);
 
-    // Add both to the tab widget
-    filterEditorTabs->addTab(functionalEditor, tr("Functional Editor"));
-    filterEditorTabs->addTab(convolutionEditor, tr("Convolution Editor"));
+  // Add both to the tab widget
+  filterEditorTabs->addTab(functionalEditor, tr("Functional Editor"));
+  filterEditorTabs->addTab(convolutionEditor, tr("Convolution Editor"));
 
-    // Create a dock widget and set the tab widget as its central widget
-    QDockWidget *filterDock = new QDockWidget(tr("Filter Editor"), this);
-    filterDock->setWidget(filterEditorTabs);
-    addDockWidget(Qt::RightDockWidgetArea, filterDock);
+  // Create a dock widget and set the tab widget as its central widget
+  QDockWidget *filterDock = new QDockWidget(tr("Filter Editor"), this);
+  filterDock->setWidget(filterEditorTabs);
+  addDockWidget(Qt::RightDockWidgetArea, filterDock);
 
-    DitheringQuantizationWidget *dqWidget = new DitheringQuantizationWidget(this);
-    addDockWidget(Qt::RightDockWidgetArea, dqWidget);
-    connect(dqWidget, &DitheringQuantizationWidget::applyOrderedDitheringRequested,
-            this, &MainWindow::onApplyOrderedDithering);
-    connect(dqWidget, &DitheringQuantizationWidget::applyPopularityQuantizationRequested,
-            this, &MainWindow::onApplyPopularityQuantization);
+  DitheringQuantizationWidget *dqWidget = new DitheringQuantizationWidget(this);
+  addDockWidget(Qt::RightDockWidgetArea, dqWidget);
+  connect(dqWidget,
+          &DitheringQuantizationWidget::applyOrderedDitheringRequested, this,
+          &MainWindow::onApplyOrderedDithering);
+  connect(dqWidget,
+          &DitheringQuantizationWidget::applyPopularityQuantizationRequested,
+          this, &MainWindow::onApplyPopularityQuantization);
 
-    // Connect the signal that sends us the LUT
-    connect(functionalEditor, &FunctionalEditorDock::functionApplied,
-            this, &MainWindow::onDockFunctionApplied);
+  // Connect the signal that sends us the LUT
+  connect(functionalEditor, &FunctionalEditorDock::functionApplied, this,
+          &MainWindow::onDockFunctionApplied);
 
-    // Add a menu item to show/hide the dock
-    auto viewMenu = menuBar()->addMenu("View");
-    viewMenu->addAction(filterDock->toggleViewAction());
-    viewMenu->addAction(dqWidget->toggleViewAction());
+  // Add a menu item to show/hide the dock
+  auto viewMenu = menuBar()->addMenu("View");
+  viewMenu->addAction(filterDock->toggleViewAction());
+  viewMenu->addAction(dqWidget->toggleViewAction());
 
-    connect(convolutionEditor, &ConvolutionEditorWidget::applyConvolutionFilter,
-        this, &MainWindow::onApplyConvolutionFilter);
+  connect(convolutionEditor, &ConvolutionEditorWidget::applyConvolutionFilter,
+          this, &MainWindow::onApplyConvolutionFilter);
 
-    connect(ui->actionLoad_Image, &QAction::triggered, this, &MainWindow::on_btnLoad_clicked);
-    connect(ui->actionClose, &QAction::triggered, this, &MainWindow::close);
-    connect(ui->actionSave_Image, &QAction::triggered, this, &MainWindow::on_btnSave_clicked);
-    connect(ui->actionReset_Image, &QAction::triggered, this, &MainWindow::on_btnReset_clicked);
+  connect(ui->actionLoad_Image, &QAction::triggered, this,
+          &MainWindow::on_btnLoad_clicked);
+  connect(ui->actionClose, &QAction::triggered, this, &MainWindow::close);
+  connect(ui->actionSave_Image, &QAction::triggered, this,
+          &MainWindow::on_btnSave_clicked);
+  connect(ui->actionReset_Image, &QAction::triggered, this,
+          &MainWindow::on_btnReset_clicked);
 
-    connect(this, &MainWindow::imageLoaded, this, [this](){
-        statusBar()->showMessage(tr("Image loaded"), 3000);
-    });
+  connect(this, &MainWindow::imageLoaded, this,
+          [this]() { statusBar()->showMessage(tr("Image loaded"), 3000); });
 }
 
-MainWindow::~MainWindow() {
-    delete ui;
-}
+MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::on_btnLoad_clicked() {
-    QString fileName = QFileDialog::getOpenFileName(
-        this, tr("Open Image"), "",
-        tr("Image Files (*.png *.jpg *.bmp)"));
-    if (fileName.isEmpty()) return;
+  QString fileName = QFileDialog::getOpenFileName(
+      this, tr("Open Image"), "", tr("Image Files (*.png *.jpg *.bmp)"));
+  if (fileName.isEmpty())
+    return;
 
-    // Load the image
-    if (!originalImage.load(fileName)) {
-        QMessageBox::critical(this, tr("Error"), tr("Could not load image."));
-        return;
-    }
+  // Load the image
+  if (!originalImage.load(fileName)) {
+    QMessageBox::critical(this, tr("Error"), tr("Could not load image."));
+    return;
+  }
 
-    filteredImage = originalImage; // Start with same as original
-    displayImages();
-    emit imageLoaded();
+  filteredImage = originalImage; // Start with same as original
+  displayImages();
+  emit imageLoaded();
 }
 
 void MainWindow::on_btnSave_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No filtered image to save."));
-        return;
-    }
-    QString fileName = QFileDialog::getSaveFileName(
-        this, tr("Save Image"), "",
-        tr("PNG (*.png);;JPEG (*.jpg *.jpeg);;BMP (*.bmp)"));
-    if (fileName.isEmpty()) return;
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No filtered image to save."));
+    return;
+  }
+  QString fileName = QFileDialog::getSaveFileName(
+      this, tr("Save Image"), "",
+      tr("PNG (*.png);;JPEG (*.jpg *.jpeg);;BMP (*.bmp)"));
+  if (fileName.isEmpty())
+    return;
 
-    if (!filteredImage.save(fileName)) {
-        QMessageBox::critical(this, tr("Error"), tr("Could not save image."));
-    }
+  if (!filteredImage.save(fileName)) {
+    QMessageBox::critical(this, tr("Error"), tr("Could not save image."));
+  }
 }
 
 void MainWindow::on_btnReset_clicked() {
-    if (originalImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image loaded."));
-        return;
-    }
-    // Revert to the original
-    filteredImage = originalImage;
-    ui->sliderBrightness->setSliderPosition(0);
-    ui->sliderContrast->setSliderPosition(100);
-    ui->sliderGamma->setSliderPosition(100);
-    displayImages();
+  if (originalImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image loaded."));
+    return;
+  }
+  // Revert to the original
+  filteredImage = originalImage;
+  ui->sliderBrightness->setSliderPosition(0);
+  ui->sliderContrast->setSliderPosition(100);
+  ui->sliderGamma->setSliderPosition(100);
+  displayImages();
 }
 
 void MainWindow::on_btnGray_clicked() {
-    if (filteredImage.format() != QImage::Format_Grayscale8) {
-        int ret = QMessageBox::question(this, tr("Convert to Grayscale?"),
-                                        tr("The image is not in grayscale. Would you like to convert it to grayscale first?"),
-                                        QMessageBox::Yes | QMessageBox::No);
-        if (ret == QMessageBox::Yes) {
-            filteredImage = filteredImage.convertToFormat(QImage::Format_Grayscale8);
-            displayImages();
-        } else {
-            return;
-        }
+  if (filteredImage.format() != QImage::Format_Grayscale8) {
+    int ret =
+        QMessageBox::question(this, tr("Convert to Grayscale?"),
+                              tr("The image is not in grayscale. Would you "
+                                 "like to convert it to grayscale first?"),
+                              QMessageBox::Yes | QMessageBox::No);
+    if (ret == QMessageBox::Yes) {
+      filteredImage = filteredImage.convertToFormat(QImage::Format_Grayscale8);
+      displayImages();
+    } else {
+      return;
     }
+  }
 }
 
-void MainWindow::onDockFunctionApplied(const QVector<int> &lut)
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, "Warning", "No image to apply function to.");
-        return;
-    }
+void MainWindow::onDockFunctionApplied(const QVector<int> &lut) {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, "Warning", "No image to apply function to.");
+    return;
+  }
 
-    QImage result = filteredImage.convertToFormat(QImage::Format_RGB32);
-    for (int y = 0; y < result.height(); ++y) {
-        for (int x = 0; x < result.width(); ++x) {
-            QRgb pixel = result.pixel(x, y);
-            int r = lut[qRed(pixel)];
-            int g = lut[qGreen(pixel)];
-            int b = lut[qBlue(pixel)];
-            result.setPixel(x, y, qRgb(r, g, b));
-        }
+  QImage result = filteredImage.convertToFormat(QImage::Format_RGB32);
+  for (int y = 0; y < result.height(); ++y) {
+    for (int x = 0; x < result.width(); ++x) {
+      QRgb pixel = result.pixel(x, y);
+      int r = lut[qRed(pixel)];
+      int g = lut[qGreen(pixel)];
+      int b = lut[qBlue(pixel)];
+      result.setPixel(x, y, qRgb(r, g, b));
     }
-    filteredImage = result;
-    displayImages();
+  }
+  filteredImage = result;
+  displayImages();
 }
 
+void MainWindow::onApplyConvolutionFilter() {
+  ConvolutionEditorWidget *convEditor = convolutionEditor;
+  QVector<QVector<int>> kernel = convEditor->getKernel();
+  int divisor = convEditor->getDivisor();
+  int offset = convEditor->getOffset();
+  QPair<int, int> anchor = convEditor->getAnchor();
 
-void MainWindow::onApplyConvolutionFilter()
-{
-    ConvolutionEditorWidget* convEditor = convolutionEditor;
-    QVector<QVector<int>> kernel = convEditor->getKernel();
-    int divisor = convEditor->getDivisor();
-    int offset = convEditor->getOffset();
-    QPair<int, int> anchor = convEditor->getAnchor();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-
-    filteredImage = Filters::applyConvolution(filteredImage, kernel, divisor, offset, anchor.first, anchor.second);
-    displayImages();
+  filteredImage = Filters::applyConvolution(
+      filteredImage, kernel, divisor, offset, anchor.first, anchor.second);
+  displayImages();
 }
 
-void MainWindow::onApplyOrderedDithering(int thresholdMapSize, int levelsPerChannel) {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = applyOrderedDithering(filteredImage, thresholdMapSize, levelsPerChannel);
-    displayImages();
+void MainWindow::onApplyOrderedDithering(int thresholdMapSize,
+                                         int levelsPerChannel) {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage =
+      applyOrderedDithering(filteredImage, thresholdMapSize, levelsPerChannel);
+  displayImages();
 }
 
 void MainWindow::onApplyPopularityQuantization(int numColors) {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = applyPopularityQuantization(filteredImage, numColors);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = applyPopularityQuantization(filteredImage, numColors);
+  displayImages();
 }
 
 void MainWindow::on_btnInvert_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = Filters::invert(filteredImage);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = Filters::invert(filteredImage);
+  displayImages();
 }
 
-void MainWindow::on_btnGenerateInvert_clicked()
-{
-    functionalEditor->setInitialInvertCurve();
+void MainWindow::on_btnGenerateInvert_clicked() {
+  functionalEditor->setInitialInvertCurve();
 }
 
-void MainWindow::on_btnBrightness_clicked()
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
+void MainWindow::on_btnBrightness_clicked() {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    filteredImage = Filters::adjustBrightness(filteredImage, ui->sliderBrightness->value());
+  filteredImage =
+      Filters::adjustBrightness(filteredImage, ui->sliderBrightness->value());
 
-    displayImages();
+  displayImages();
 }
 
-void MainWindow::on_btnGenerateBrightness_clicked()
-{
-    int delta = ui->sliderBrightness->value();
-    functionalEditor->setInitialBrightnessCurve(delta, 6);
+void MainWindow::on_btnGenerateBrightness_clicked() {
+  int delta = ui->sliderBrightness->value();
+  functionalEditor->setInitialBrightnessCurve(delta, 6);
 }
 
-void MainWindow::on_btnContrast_clicked()
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
+void MainWindow::on_btnContrast_clicked() {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    filteredImage = Filters::adjustContrast(filteredImage, ui->sliderContrast->value() / 100.0);
+  filteredImage = Filters::adjustContrast(filteredImage,
+                                          ui->sliderContrast->value() / 100.0);
 
-    displayImages();
+  displayImages();
 }
 
 void MainWindow::on_btnGenerateContrast_clicked() {
-    double factor = ui->sliderContrast->value() / 100.0;
-    functionalEditor->setInitialContrastCurve(factor, 6);
+  double factor = ui->sliderContrast->value() / 100.0;
+  functionalEditor->setInitialContrastCurve(factor, 6);
 }
 
-void MainWindow::on_btnGamma_clicked()
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
+void MainWindow::on_btnGamma_clicked() {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    filteredImage = Filters::adjustGamma(filteredImage, ui->sliderGamma->value() / 100.0);
+  filteredImage =
+      Filters::adjustGamma(filteredImage, ui->sliderGamma->value() / 100.0);
 
-    displayImages();
+  displayImages();
 }
 
 void MainWindow::on_btnBlur_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = Filters::blur3x3(filteredImage);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = Filters::blur3x3(filteredImage);
+  displayImages();
 }
 
 void MainWindow::on_btnGauss_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = Filters::gaussianBlur3x3(filteredImage);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = Filters::gaussianBlur3x3(filteredImage);
+  displayImages();
 }
 
 void MainWindow::on_btnSharpen_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = Filters::sharpen3x3(filteredImage);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = Filters::sharpen3x3(filteredImage);
+  displayImages();
 }
 
 void MainWindow::on_btnEdge_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = Filters::edgeDetect3x3(filteredImage);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = Filters::edgeDetect3x3(filteredImage);
+  displayImages();
 }
 
 void MainWindow::on_btnEmboss_clicked() {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = Filters::emboss3x3(filteredImage);
-    displayImages();
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = Filters::emboss3x3(filteredImage);
+  displayImages();
 }
 
-void MainWindow::on_btnMedian_clicked()
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
+void MainWindow::on_btnMedian_clicked() {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    if (filteredImage.format() != QImage::Format_Grayscale8) {
-        int ret = QMessageBox::question(this, tr("Convert to Grayscale?"),
-                                        tr("The image is not in grayscale. Would you like to convert it to grayscale first?"),
-                                        QMessageBox::Yes | QMessageBox::No);
-        if (ret == QMessageBox::Yes) {
-            filteredImage = filteredImage.convertToFormat(QImage::Format_Grayscale8);
-        } else {
-            return;
-        }
+  if (filteredImage.format() != QImage::Format_Grayscale8) {
+    int ret =
+        QMessageBox::question(this, tr("Convert to Grayscale?"),
+                              tr("The image is not in grayscale. Would you "
+                                 "like to convert it to grayscale first?"),
+                              QMessageBox::Yes | QMessageBox::No);
+    if (ret == QMessageBox::Yes) {
+      filteredImage = filteredImage.convertToFormat(QImage::Format_Grayscale8);
+    } else {
+      return;
     }
+  }
 
-    filteredImage = Filters::applyMedianFilter(filteredImage, 3);
-    displayImages();
+  filteredImage = Filters::applyMedianFilter(filteredImage, 3);
+  displayImages();
 }
 
-void MainWindow::on_btnErosion_clicked()
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
+void MainWindow::on_btnErosion_clicked() {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    filteredImage = Filters::applyErosionFilter(filteredImage, 3);
-    displayImages();
+  filteredImage = Filters::applyErosionFilter(filteredImage, 3);
+  displayImages();
 }
 
-void MainWindow::on_btnDilation_clicked()
-{
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
+void MainWindow::on_btnDilation_clicked() {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
 
-    filteredImage = Filters::applyDilationFilter(filteredImage, 3);
-    displayImages();
+  filteredImage = Filters::applyDilationFilter(filteredImage, 3);
+  displayImages();
 }
 
 void MainWindow::displayImages() {
-    if (!originalImage.isNull()) {
-        ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage));
-    }
-    if (!filteredImage.isNull()) {
-        ui->labelFiltered->setPixmap(QPixmap::fromImage(filteredImage));
-    }
+  if (!originalImage.isNull()) {
+    ui->labelOriginal->setPixmap(QPixmap::fromImage(originalImage));
+  }
+  if (!filteredImage.isNull()) {
+    ui->labelFiltered->setPixmap(QPixmap::fromImage(filteredImage));
+  }
 }
 
-void MainWindow::resizeEvent(QResizeEvent *event)
-{
-    QMainWindow::resizeEvent(event);
-    displayImages();
+void MainWindow::resizeEvent(QResizeEvent *event) {
+  QMainWindow::resizeEvent(event);
+  displayImages();
 }
