@@ -36,6 +36,13 @@ MainWindow::MainWindow(QWidget *parent)
     filterDock->setWidget(filterEditorTabs);
     addDockWidget(Qt::RightDockWidgetArea, filterDock);
 
+    DitheringQuantizationWidget *dqWidget = new DitheringQuantizationWidget(this);
+    addDockWidget(Qt::RightDockWidgetArea, dqWidget);
+    connect(dqWidget, &DitheringQuantizationWidget::applyOrderedDitheringRequested,
+            this, &MainWindow::onApplyOrderedDithering);
+    connect(dqWidget, &DitheringQuantizationWidget::applyPopularityQuantizationRequested,
+            this, &MainWindow::onApplyPopularityQuantization);
+
     // Connect the signal that sends us the LUT
     connect(functionalEditor, &FunctionalEditorDock::functionApplied,
             this, &MainWindow::onDockFunctionApplied);
@@ -43,6 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Add a menu item to show/hide the dock
     auto viewMenu = menuBar()->addMenu("View");
     viewMenu->addAction(filterDock->toggleViewAction());
+    viewMenu->addAction(dqWidget->toggleViewAction());
 
     connect(convolutionEditor, &ConvolutionEditorWidget::applyConvolutionFilter,
         this, &MainWindow::onApplyConvolutionFilter);
@@ -106,6 +114,20 @@ void MainWindow::on_btnReset_clicked() {
     displayImages();
 }
 
+void MainWindow::on_btnGray_clicked() {
+    if (filteredImage.format() != QImage::Format_Grayscale8) {
+        int ret = QMessageBox::question(this, tr("Convert to Grayscale?"),
+                                        tr("The image is not in grayscale. Would you like to convert it to grayscale first?"),
+                                        QMessageBox::Yes | QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            filteredImage = filteredImage.convertToFormat(QImage::Format_Grayscale8);
+            displayImages();
+        } else {
+            return;
+        }
+    }
+}
+
 void MainWindow::onDockFunctionApplied(const QVector<int> &lut)
 {
     if (filteredImage.isNull()) {
@@ -136,7 +158,30 @@ void MainWindow::onApplyConvolutionFilter()
     int offset = convEditor->getOffset();
     QPair<int, int> anchor = convEditor->getAnchor();
 
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+
     filteredImage = Filters::applyConvolution(filteredImage, kernel, divisor, offset, anchor.first, anchor.second);
+    displayImages();
+}
+
+void MainWindow::onApplyOrderedDithering(int thresholdMapSize, int levelsPerChannel) {
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+    filteredImage = applyOrderedDithering(filteredImage, thresholdMapSize, levelsPerChannel);
+    displayImages();
+}
+
+void MainWindow::onApplyPopularityQuantization(int numColors) {
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+    filteredImage = applyPopularityQuantization(filteredImage, numColors);
     displayImages();
 }
 

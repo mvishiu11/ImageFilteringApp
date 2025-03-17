@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/styles">
+        <file>style.qss</file>
+    </qresource>
+    <qresource prefix="/icons">
+        <file>icons/chevron-up.svg</file>
+        <file>icons/check.svg</file>
+        <file>icons/chevron-down.svg</file>
+    </qresource>
+</RCC>

@@ -6,8 +6,6 @@
 #include <QTabWidget>
 #include "FunctionalEditorDock.h"
 #include "ConvolutionEditorWidget.h"
-#include "DitheringAndQuantizationWidget.h"
-#include "DitheringAndQuantization.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -36,7 +34,6 @@ private slots:
     void on_btnLoad_clicked();  ///< Loads an image from disk.
     void on_btnSave_clicked();  ///< Saves the processed image to disk.
     void on_btnReset_clicked(); ///< Resets to the original image.
-    void on_btnGray_clicked();  ///< Converts image to grayscale
 
     // Filter actions
     void on_btnInvert_clicked();                      ///< Applies inversion filter.
@@ -62,9 +59,6 @@ private slots:
     void onDockFunctionApplied(const QVector<int> &lut);
 
     void onApplyConvolutionFilter();
-
-    void onApplyOrderedDithering(int thresholdMapSize, int levelsPerChannel);
-    void onApplyPopularityQuantization(int numColors);
 
 private:
     Ui::MainWindow *ui;   ///< The UI instance.

@@ -12,28 +12,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
-# List all source and header files from the src folder
-set(PROJECT_SOURCES
-    src/main.cpp
-    src/mainwindow.cpp
-    src/mainwindow.h
-    src/mainwindow.ui
-    src/filters.h
-    src/filters.cpp
-    src/FunctionalEditorDock.h
-    src/FunctionalEditorDock.cpp
-    src/FunctionEditorCanvas.h
-    src/FunctionEditorCanvas.cpp
-    src/ConvolutionEditorWidget.h
-    src/ConvolutionEditorWidget.cpp
-    src/style.qss
-    src/resources.qrc
-)
-
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(ImageFilteringApp
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        src/DitheringAndQuantization.h
+        src/DitheringAndQuantization.cpp
+        src/DitheringAndQuantizationWidget.h src/DitheringAndQuantizationWidget.cpp
+        src/main.cpp
+        src/mainwindow.cpp
+        src/mainwindow.h
+        src/mainwindow.ui
+        src/filters.h
+        src/filters.cpp
+        src/FunctionalEditorDock.h
+        src/FunctionalEditorDock.cpp
+        src/FunctionEditorCanvas.h
+        src/FunctionEditorCanvas.cpp
+        src/ConvolutionEditorWidget.h
+        src/ConvolutionEditorWidget.cpp
+        src/style.qss
+        src/resources.qrc
     )
 else()
     if(ANDROID)
