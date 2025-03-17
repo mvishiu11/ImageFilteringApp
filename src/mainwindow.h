@@ -2,9 +2,9 @@
 #define MAINWINDOW_H
 
 #include "ConvolutionEditorWidget.h"
-#include "DitheringAndQuantization.h"
 #include "DitheringAndQuantizationWidget.h"
 #include "FunctionalEditorDock.h"
+#include "ditheringandquantization.h"
 #include <QImage>
 #include <QMainWindow>
 #include <QTabWidget>

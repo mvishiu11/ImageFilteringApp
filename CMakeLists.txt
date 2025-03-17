@@ -16,8 +16,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(ImageFilteringApp
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        src/DitheringAndQuantization.h
-        src/DitheringAndQuantization.cpp
+        src/ditheringandquantization.h
+        src/ditheringandquantization.cpp
         src/DitheringAndQuantizationWidget.h src/DitheringAndQuantizationWidget.cpp
         src/main.cpp
         src/mainwindow.cpp

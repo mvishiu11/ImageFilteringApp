@@ -1,9 +1,11 @@
-#include "DitheringAndQuantization.h"
+#include "ditheringandquantization.h"
 #include <QColor>
 #include <QMap>
 #include <QPair>
 #include <QtMath>
 #include <algorithm>
+
+namespace DitheringAndQuantization {
 
 /* --- Helper: Predefined Threshold Matrices (Bayer-like) --- */
 static QVector<QVector<int>> getThresholdMatrix(int size) {
@@ -150,3 +152,5 @@ QImage applyPopularityQuantization(const QImage &image, int numColors) {
   }
   return dst;
 }
+
+} // namespace DitheringAndQuantization

@@ -4,6 +4,7 @@
 #include <QImage>
 #include <QVector>
 
+namespace DitheringAndQuantization {
 /**
  * @brief Applies an Ordered Dithering algorithm to a color image.
  *
@@ -32,5 +33,7 @@ QImage applyOrderedDithering(const QImage &image, int thresholdMapSize,
  * @return A new QImage with the popularity quantization applied.
  */
 QImage applyPopularityQuantization(const QImage &image, int numColors);
+
+} // namespace DitheringAndQuantization
 
 #endif // DITHERINGANDQUANTIZATION_H

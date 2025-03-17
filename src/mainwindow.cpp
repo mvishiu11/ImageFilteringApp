@@ -177,8 +177,8 @@ void MainWindow::onApplyOrderedDithering(int thresholdMapSize,
     QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
     return;
   }
-  filteredImage =
-      applyOrderedDithering(filteredImage, thresholdMapSize, levelsPerChannel);
+  filteredImage = DitheringAndQuantization::applyOrderedDithering(
+      filteredImage, thresholdMapSize, levelsPerChannel);
   displayImages();
 }
 
@@ -187,7 +187,8 @@ void MainWindow::onApplyPopularityQuantization(int numColors) {
     QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
     return;
   }
-  filteredImage = applyPopularityQuantization(filteredImage, numColors);
+  filteredImage = DitheringAndQuantization::applyPopularityQuantization(
+      filteredImage, numColors);
   displayImages();
 }
 
