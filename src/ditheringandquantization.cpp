@@ -6,9 +6,8 @@
 #include <algorithm>
 
 namespace {
-    /* --- Helper: Predefined Threshold Matrices (Bayer-like) --- */
+    /* --- Helper: Predefined Threshold Matrices --- */
     static QVector<QVector<int>> getThresholdMatrix(int size) {
-        // Predefine matrices for sizes 2, 3, 4, and 6.
         if (size == 2) {
             return {{0, 2}, {3, 1}};
         }
@@ -23,26 +22,25 @@ namespace {
                     {12, 44, 4, 36, 14, 46}, {60, 28, 52, 20, 62, 30},
                     {3, 35, 11, 43, 1, 33},  {51, 19, 59, 27, 49, 17}};
         }
-        // Default: if an unsupported size is provided, fallback to 2x2.
         return getThresholdMatrix(2);
     }
 }
 
 namespace DitheringAndQuantization {
 
-    /* --- Ordered Dithering Implementation --- */
+    /* --- Ordered Dithering --- */
     QImage applyOrderedDithering(const QImage &image, int thresholdMapSize,
                                  int levelsPerChannel) {
       if (levelsPerChannel < 2)
         levelsPerChannel = 2; // At least 2 levels.
 
       QVector<QVector<int>> thresholdMatrix = getThresholdMatrix(thresholdMapSize);
-      int matrixMax = thresholdMapSize * thresholdMapSize; // maximum value +1
-      // We'll use the formula:
-      // Let v_norm = v / 255 * levelsPerChannel.
-      // Let q = floor(v_norm)
-      // Let frac = v_norm - q.
-      // Let T = (thresholdMatrix[x mod N][y mod N] + 0.5) / (matrixMax)
+      int matrixMax = thresholdMapSize * thresholdMapSize;
+      // Formula:
+      // v_norm = v / 255 * levelsPerChannel.
+      // q = floor(v_norm)
+      // frac = v_norm - q.
+      // T = (thresholdMatrix[x mod N][y mod N] + 0.5) / (matrixMax)
       // If (frac > T) then q++.
       // Output = clamp(q, 0, levelsPerChannel - 1) scaled back to 0-255.
 
@@ -96,7 +94,62 @@ namespace DitheringAndQuantization {
       return dst;
     }
 
-    /* --- Popularity Quantization Implementation --- */
+    /* --- Ordered Dithering in YCbCr --- */
+    QImage applyOrderedDitheringInYCbCr(const QImage &image, int thresholdMapSize,
+                                        int levelsY)
+    {
+        if (levelsY <= 2)
+            levelsY = 3;
+        else if (levelsY % 2 == 0)
+            levelsY = levelsY + 1;
+
+        QVector<QVector<int>> thresholdMatrix = getThresholdMatrix(thresholdMapSize);
+        int matrixSize = thresholdMapSize;
+        int matrixMax = matrixSize * matrixSize;
+
+        QImage src = image.convertToFormat(QImage::Format_RGB32);
+        QImage dst(src.size(), QImage::Format_RGB32);
+        int width = src.width();
+        int height = src.height();
+
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                QColor origColor(src.pixel(x, y));
+                // Convert RGB to YCbCr
+                double R = origColor.red();
+                double G = origColor.green();
+                double B = origColor.blue();
+                double Y_val = 0.299 * R + 0.587 * G + 0.114 * B;
+                double Cb = 128 - 0.168736 * R - 0.331264 * G + 0.5 * B;
+                double Cr = 128 + 0.5 * R - 0.418688 * G - 0.081312 * B;
+
+                // --- Apply Ordered Dithering on the Y Channel ---
+                double y_norm = (Y_val / 255.0) * levelsY;
+                int q = int(floor(y_norm));
+                double frac = y_norm - q;
+                int i = x % matrixSize;
+                int j = y % matrixSize;
+                double T = (thresholdMatrix[j][i] + 0.5) / double(matrixMax);
+                if (frac > T)
+                    q++;
+                q = std::clamp(q, 0, levelsY - 1);
+                double newY = (levelsY > 1) ? (q * 255.0 / (levelsY - 1)) : 0;
+
+                // --- Convert YCbCr back to RGB ---
+                int newR = int(newY + 1.402 * (Cr - 128));
+                int newG = int(newY - 0.344136 * (Cb - 128) - 0.714136 * (Cr - 128));
+                int newB = int(newY + 1.772 * (Cb - 128));
+                newR = std::clamp(newR, 0, 255);
+                newG = std::clamp(newG, 0, 255);
+                newB = std::clamp(newB, 0, 255);
+
+                dst.setPixel(x, y, qRgb(newR, newG, newB));
+            }
+        }
+        return dst;
+    }
+
+    /* --- Popularity Quantization --- */
     QImage applyPopularityQuantization(const QImage &image, int numColors) {
       QImage src = image.convertToFormat(QImage::Format_RGB32);
       int width = src.width();

@@ -43,6 +43,9 @@ MainWindow::MainWindow(QWidget *parent)
           &DitheringQuantizationWidget::applyOrderedDitheringRequested, this,
           &MainWindow::onApplyOrderedDithering);
   connect(dqWidget,
+          &DitheringQuantizationWidget::applyOrderedDitheringYCbCrRequested, this,
+          &MainWindow::onApplyOrderedDitheringYCbCr);
+  connect(dqWidget,
           &DitheringQuantizationWidget::applyPopularityQuantizationRequested,
           this, &MainWindow::onApplyPopularityQuantization);
 
@@ -180,6 +183,16 @@ void MainWindow::onApplyOrderedDithering(int thresholdMapSize,
   filteredImage = DitheringAndQuantization::applyOrderedDithering(
       filteredImage, thresholdMapSize, levelsPerChannel);
   displayImages();
+}
+
+void MainWindow::onApplyOrderedDitheringYCbCr(int thresholdMapSize, int levelsPerChannel) {
+    if (filteredImage.isNull()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+        return;
+    }
+    filteredImage = DitheringAndQuantization::applyOrderedDitheringInYCbCr(
+        filteredImage, thresholdMapSize, levelsPerChannel);
+    displayImages();
 }
 
 void MainWindow::onApplyPopularityQuantization(int numColors) {

@@ -34,6 +34,20 @@ QImage applyOrderedDithering(const QImage &image, int thresholdMapSize,
  */
 QImage applyPopularityQuantization(const QImage &image, int numColors);
 
+/**
+ * @brief Converts an image from RGB to YCbCr, applies ordered dithering on the Y channel,
+ * and then converts the result back to RGB.
+ *
+ * The dithering algorithm uses a threshold matrix (Bayer-like) of size 3×3.
+ * The Y channel is quantized to the specified number of levels (default is 8).
+ * The Cb and Cr channels are left unchanged.
+ *
+ * @param image The input RGB QImage.
+ * @param levelsY The number of quantization levels for the Y channel (default 3).
+ * @return A new QImage with the ordered dithering applied on the Y channel.
+ */
+QImage applyOrderedDitheringInYCbCr(const QImage &image, int thresholdMapSize, int levelsY = 3);
+
 } // namespace DitheringAndQuantization
 
 #endif // DITHERINGANDQUANTIZATION_H

@@ -46,6 +46,12 @@ DitheringQuantizationWidget::DitheringQuantizationWidget(QWidget *parent)
   connect(btnApplyDithering, &QPushButton::clicked, this,
           &DitheringQuantizationWidget::onApplyOrderedDitheringClicked);
 
+  btnApplyDitheringYCbCr =
+      new QPushButton(tr("Apply Ordered Dithering in YCbCr"), dockContent);
+  mainLayout->addWidget(btnApplyDitheringYCbCr);
+  connect(btnApplyDitheringYCbCr, &QPushButton::clicked, this,
+          &DitheringQuantizationWidget::onApplyOrderedDitheringYCbCrClicked);
+
   // --- Separator ---
   QFrame *separator = new QFrame(dockContent);
   separator->setFrameShape(QFrame::HLine);
@@ -82,6 +88,12 @@ void DitheringQuantizationWidget::onApplyOrderedDitheringClicked() {
   int thresholdMapSize = comboThresholdSize->currentData().toInt();
   int levelsPerChannel = spinLevels->value();
   emit applyOrderedDitheringRequested(thresholdMapSize, levelsPerChannel);
+}
+
+void DitheringQuantizationWidget::onApplyOrderedDitheringYCbCrClicked() {
+    int thresholdMapSize = comboThresholdSize->currentData().toInt();
+    int levelsPerChannel = spinLevels->value();
+    emit applyOrderedDitheringYCbCrRequested(thresholdMapSize, levelsPerChannel);
 }
 
 void DitheringQuantizationWidget::onApplyPopularityQuantizationClicked() {

@@ -40,6 +40,14 @@ signals:
                                       int levelsPerChannel);
 
   /**
+   * @brief Emitted when the user requests to apply ordered dithering with conversion to YCbCr space.
+   * @param thresholdMapSize The selected threshold map size.
+   * @param levelsPerChannel The number of quantization levels per channel (must be odd).
+   */
+  void applyOrderedDitheringYCbCrRequested(int thresholdMapSize,
+                                           int levelsPerChannel);
+
+  /**
    * @brief Emitted when the user requests to apply popularity quantization.
    * @param numColors The desired number of colors.
    */
@@ -47,6 +55,7 @@ signals:
 
 private slots:
   void onApplyOrderedDitheringClicked();
+  void onApplyOrderedDitheringYCbCrClicked();
   void onApplyPopularityQuantizationClicked();
 
 private:
@@ -55,6 +64,7 @@ private:
       *comboThresholdSize;    ///< Dropdown to select threshold map size.
   class QSpinBox *spinLevels; ///< SpinBox for quantization levels per channel.
   class QPushButton *btnApplyDithering; ///< Button to apply ordered dithering.
+  class QPushButton *btnApplyDitheringYCbCr; ///< Button to apply ordered dithering.
 
   // Controls for Popularity Quantization.
   class QSpinBox *spinNumColors; ///< SpinBox for number of colors.

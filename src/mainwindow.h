@@ -66,6 +66,7 @@ private slots:
   void onApplyConvolutionFilter();
 
   void onApplyOrderedDithering(int thresholdMapSize, int levelsPerChannel);
+  void onApplyOrderedDitheringYCbCr(int thresholdMapSize, int levelsPerChannel);
   void onApplyPopularityQuantization(int numColors);
 
 private:
