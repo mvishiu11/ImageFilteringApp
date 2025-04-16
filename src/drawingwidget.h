@@ -81,6 +81,7 @@ private:
     None,
     LineP0,
     LineP1,
+    LineBody,
     CircCenter,
     CircEdge,
     PolyVertex,

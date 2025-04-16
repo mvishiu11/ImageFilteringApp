@@ -30,6 +30,34 @@ The Image Filtering App is a cross-platform desktop application built using C++ 
   - Save the processed image to a file.
   - Custom styling via Qt Style Sheets for a modern, polished look.
 
+## Features - v2:
+
+- drawing lines:
+  - [x] drawing lines with a mouse (e.g. by first clicking to select the starting
+point of a line and then clicking to select the end point),
+  - [x] editing existing lines with a mouse (moving end points),
+  - [x] deleting existing lines,
+  - [x] changing the thickness of individual lines
+- drawing circles:
+  - [x] drawing circles with a mouse (e.g. by first clicking to select the center
+of a circle and then clicking on a point on the circle),
+  - [x] editing existing circles with a mouse (moving circle and changing its
+radius),
+  - [x] deleting existing circles
+- drawing polygons:
+  - [x] drawing polygons with a mouse (e.g. by clicking to select the next
+vertex of a polygon and clicking in the proximity of a first vertex to
+close the polygon),
+  - [x] editing existing polygons with a mouse (moving vertices, edges and
+entire polygon),
+  - [x] deleting existing polygons,
+  - [x] changing the thickness of all the edges of individual polygons
+- [x] changing the color of individual shapes,
+- [x] option to remove all of the shapes clearing the screen,
+- [x] option to turn on and turn off anti-aliasing for all the shapes on the screen,
+- [x] loading and saving shapes to a single files containing vector information,
+that is only properties of each shape like vertices position, color etc.,
+
 ## Requirements
 
 - **Development Environment:**

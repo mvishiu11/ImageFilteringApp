@@ -209,6 +209,16 @@ void DrawingWidget::redrawAllShapes() {
 }
 
 /* ---- paintEvent ------------------------------------------------------- */
+static void drawCenterMarker(QPainter &p, const QPoint &c, int zoom) {
+  const int r = 4;
+  QPen pen(Qt::red, 1);
+  pen.setCosmetic(true);
+  p.setPen(pen);
+  QPoint zc(c * zoom);
+  p.drawLine(zc + QPoint(-r, 0), zc + QPoint(r, 0));
+  p.drawLine(zc + QPoint(0, -r), zc + QPoint(0, r));
+}
+
 void DrawingWidget::paintEvent(QPaintEvent *) {
   QPainter painter(this);
   int ox = (width() - canvas.width() * zoomFactor) / 2;
@@ -218,12 +228,18 @@ void DrawingWidget::paintEvent(QPaintEvent *) {
   painter.drawImage(0, 0, canvas);
   painter.resetTransform();
   if (currentMode == DM_Selection && selectedShape) {
-    painter.setPen(QPen(Qt::red, 2));
+    QPen pen(Qt::red, 2);
+    pen.setCosmetic(true);
+    painter.setPen(pen);
     if (auto *L = dynamic_cast<LineShape *>(selectedShape)) {
       QRect r(L->p0, L->p1);
       painter.drawRect(r.normalized().adjusted(-5, -5, 5, 5));
     } else if (auto *C = dynamic_cast<CircleShape *>(selectedShape)) {
+      painter.translate(ox, oy);
+      painter.scale(zoomFactor, zoomFactor);
       painter.drawEllipse(C->center, C->radius, C->radius);
+      drawCenterMarker(painter, C->center, 1 /*already in zoom‑space*/);
+      painter.resetTransform();
     } else if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
       for (const QPoint &pt : P->vertices)
         painter.drawEllipse(pt, 3, 3);
@@ -304,11 +320,16 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
       (ev->buttons() & Qt::LeftButton)) {
     QPoint delta = pos - lastMousePos;
     lastMousePos = pos;
+
     if (auto *L = dynamic_cast<LineShape *>(selectedShape)) {
       if (hit == LineP0)
         L->p0 += delta;
       else if (hit == LineP1)
         L->p1 += delta;
+      else if (hit == LineBody) {
+        L->p0 += delta;
+        L->p1 += delta;
+      }
     } else if (auto *C = dynamic_cast<CircleShape *>(selectedShape)) {
       if (hit == CircCenter)
         C->center += delta;
@@ -316,7 +337,7 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
         C->radius =
             int(std::hypot(pos.x() - C->center.x(), pos.y() - C->center.y()));
     } else if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
-      if (hit == PolyVertex && hitIndex >= 0 && hitIndex < P->vertices.size())
+      if (hit == PolyVertex && hitIndex >= 0)
         P->vertices[hitIndex] += delta;
       else if (hit == PolyBody)
         P->moveBy(delta.x(), delta.y());
@@ -339,6 +360,7 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
   }
   update();
 }
+
 void DrawingWidget::mouseReleaseEvent(QMouseEvent *ev) {
   QPoint pos = mapToCanvas(ev->pos());
   if (currentMode == DM_Polygon && isDrawing) {
@@ -420,6 +442,17 @@ void DrawingWidget::selectShapeAt(const QPoint &pos) {
   selectedShape = nullptr;
   hit = None;
   hitIndex = -1;
+
+  auto distToSegment = [&](QPoint a, QPoint b) {
+    double A = pos.x() - a.x(), B = pos.y() - a.y();
+    double C = b.x() - a.x(), D = b.y() - a.y();
+    double dot = A * C + B * D, len2 = C * C + D * D;
+    double t = (len2 ? dot / len2 : -1);
+    t = qBound(0.0, t, 1.0);
+    double rx = a.x() + t * C, ry = a.y() + t * D;
+    return std::hypot(pos.x() - rx, pos.y() - ry);
+  };
+
   for (auto *s : shapes) {
     if (auto *L = dynamic_cast<LineShape *>(s)) {
       if ((pos - L->p0).manhattanLength() < T) {
@@ -430,6 +463,11 @@ void DrawingWidget::selectShapeAt(const QPoint &pos) {
       if ((pos - L->p1).manhattanLength() < T) {
         selectedShape = L;
         hit = LineP1;
+        return;
+      }
+      if (distToSegment(L->p0, L->p1) < T) {
+        selectedShape = L;
+        hit = LineBody;
         return;
       }
     } else if (auto *C = dynamic_cast<CircleShape *>(s)) {

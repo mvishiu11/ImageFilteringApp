@@ -22,19 +22,21 @@ void LineShape::read(QDataStream &in) {
 /* -------- CircleShape -------------------------------------------------- */
 void CircleShape::draw(QImage &im) const {
   if (useAntiAlias) {
-    drawCircleAA(im, center.x(), center.y(), radius, drawingColor);
-    return;
-  }
-  int h = lineThickness / 2;
-  for (int i = -h; i <= h; ++i) {
-    int r = radius + i;
-    if (r > 0)
-      drawCircleMidpoint(im, center.x(), center.y(), r, drawingColor);
+    drawCircleWu(im, center.x(), center.y(), radius, drawingColor);
+  } else {
+    int h = lineThickness / 2;
+    for (int i = -h; i <= h; ++i) {
+      int r2 = radius + i;
+      if (r2 > 0)
+        drawCircleMidpoint(im, center.x(), center.y(), r2, drawingColor);
+    }
   }
 }
+
 void CircleShape::write(QDataStream &out) const {
   out << center << radius << drawingColor << lineThickness << useAntiAlias;
 }
+
 void CircleShape::read(QDataStream &in) {
   in >> center >> radius >> drawingColor >> lineThickness >> useAntiAlias;
 }
