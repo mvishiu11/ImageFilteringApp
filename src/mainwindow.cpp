@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "ditheringandquantization.h"
 #include "filters.h"
 #include "ui_mainwindow.h"
 
@@ -8,19 +9,47 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QResizeEvent>
+#include <QStackedWidget>
+#include <QToolBar>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
 
-  filterEditorTabs = new QTabWidget(this);
+  // Create a stacked widget to switch between filter mode and drawing mode.
+  modeStack = new QStackedWidget(this);
 
+  // Create filtering page: Wrap existing filtering UI.
+  // Assume ui->centralWidget contains your original filter UI (image labels,
+  // sliders, etc.)
+  filteringPage = ui->centralwidget; // If using the designer's central widget.
+  modeStack->addWidget(filteringPage);
+
+  // Create the drawing page.
+  drawingPage = new DrawingWidget(this);
+  modeStack->addWidget(drawingPage);
+
+  // Set the stacked widget as the new central widget.
+  setCentralWidget(modeStack);
+
+  // Create a toolbar with mode-switching actions.
+  QToolBar *modeToolBar = addToolBar(tr("Mode"));
+  QAction *filterModeAction = modeToolBar->addAction(tr("Filter Mode"));
+  QAction *drawModeAction = modeToolBar->addAction(tr("Draw Mode"));
+
+  connect(filterModeAction, &QAction::triggered, this,
+          &MainWindow::switchToFilterMode);
+  connect(drawModeAction, &QAction::triggered, this,
+          &MainWindow::switchToDrawMode);
+
+  // Re-add your docks for filtering as before:
+
+  filterEditorTabs = new QTabWidget(this);
   // Create the functional editor
   functionalEditor = new FunctionalEditorDock(this);
   // Create the convolution editor
   convolutionEditor = new ConvolutionEditorWidget(this);
 
-  // Disable dock features for prettier UI
   functionalEditor->setFeatures(functionalEditor->features() &
                                 ~QDockWidget::DockWidgetFloatable &
                                 ~QDockWidget::DockWidgetClosable);
@@ -28,38 +57,34 @@ MainWindow::MainWindow(QWidget *parent)
                                  ~QDockWidget::DockWidgetFloatable &
                                  ~QDockWidget::DockWidgetClosable);
 
-  // Add both to the tab widget
   filterEditorTabs->addTab(functionalEditor, tr("Functional Editor"));
   filterEditorTabs->addTab(convolutionEditor, tr("Convolution Editor"));
 
-  // Create a dock widget and set the tab widget as its central widget
   QDockWidget *filterDock = new QDockWidget(tr("Filter Editor"), this);
   filterDock->setWidget(filterEditorTabs);
   addDockWidget(Qt::RightDockWidgetArea, filterDock);
 
-  DitheringQuantizationWidget *dqWidget = new DitheringQuantizationWidget(this);
+  dqWidget = new DitheringQuantizationWidget(this);
   addDockWidget(Qt::RightDockWidgetArea, dqWidget);
   connect(dqWidget,
           &DitheringQuantizationWidget::applyOrderedDitheringRequested, this,
           &MainWindow::onApplyOrderedDithering);
   connect(dqWidget,
-          &DitheringQuantizationWidget::applyOrderedDitheringYCbCrRequested, this,
-          &MainWindow::onApplyOrderedDitheringYCbCr);
+          &DitheringQuantizationWidget::applyOrderedDitheringYCbCrRequested,
+          this, &MainWindow::onApplyOrderedDitheringYCbCr);
   connect(dqWidget,
           &DitheringQuantizationWidget::applyPopularityQuantizationRequested,
           this, &MainWindow::onApplyPopularityQuantization);
 
-  // Connect the signal that sends us the LUT
   connect(functionalEditor, &FunctionalEditorDock::functionApplied, this,
           &MainWindow::onDockFunctionApplied);
+  connect(convolutionEditor, &ConvolutionEditorWidget::applyConvolutionFilter,
+          this, &MainWindow::onApplyConvolutionFilter);
 
-  // Add a menu item to show/hide the dock
+  // Connect menu actions for file operations.
   auto viewMenu = menuBar()->addMenu("View");
   viewMenu->addAction(filterDock->toggleViewAction());
   viewMenu->addAction(dqWidget->toggleViewAction());
-
-  connect(convolutionEditor, &ConvolutionEditorWidget::applyConvolutionFilter,
-          this, &MainWindow::onApplyConvolutionFilter);
 
   connect(ui->actionLoad_Image, &QAction::triggered, this,
           &MainWindow::on_btnLoad_clicked);
@@ -71,6 +96,14 @@ MainWindow::MainWindow(QWidget *parent)
 
   connect(this, &MainWindow::imageLoaded, this,
           [this]() { statusBar()->showMessage(tr("Image loaded"), 3000); });
+}
+
+void MainWindow::switchToFilterMode() {
+  modeStack->setCurrentWidget(filteringPage);
+}
+
+void MainWindow::switchToDrawMode() {
+  modeStack->setCurrentWidget(drawingPage);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -185,14 +218,15 @@ void MainWindow::onApplyOrderedDithering(int thresholdMapSize,
   displayImages();
 }
 
-void MainWindow::onApplyOrderedDitheringYCbCr(int thresholdMapSize, int levelsPerChannel) {
-    if (filteredImage.isNull()) {
-        QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
-        return;
-    }
-    filteredImage = DitheringAndQuantization::applyOrderedDitheringInYCbCr(
-        filteredImage, thresholdMapSize, levelsPerChannel);
-    displayImages();
+void MainWindow::onApplyOrderedDitheringYCbCr(int thresholdMapSize,
+                                              int levelsPerChannel) {
+  if (filteredImage.isNull()) {
+    QMessageBox::warning(this, tr("Warning"), tr("No image to filter."));
+    return;
+  }
+  filteredImage = DitheringAndQuantization::applyOrderedDitheringInYCbCr(
+      filteredImage, thresholdMapSize, levelsPerChannel);
+  displayImages();
 }
 
 void MainWindow::onApplyPopularityQuantization(int numColors) {

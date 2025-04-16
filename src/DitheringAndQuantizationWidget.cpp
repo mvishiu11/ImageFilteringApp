@@ -91,9 +91,9 @@ void DitheringQuantizationWidget::onApplyOrderedDitheringClicked() {
 }
 
 void DitheringQuantizationWidget::onApplyOrderedDitheringYCbCrClicked() {
-    int thresholdMapSize = comboThresholdSize->currentData().toInt();
-    int levelsPerChannel = spinLevels->value();
-    emit applyOrderedDitheringYCbCrRequested(thresholdMapSize, levelsPerChannel);
+  int thresholdMapSize = comboThresholdSize->currentData().toInt();
+  int levelsPerChannel = spinLevels->value();
+  emit applyOrderedDitheringYCbCrRequested(thresholdMapSize, levelsPerChannel);
 }
 
 void DitheringQuantizationWidget::onApplyPopularityQuantizationClicked() {

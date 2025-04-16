@@ -33,6 +33,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         src/ConvolutionEditorWidget.cpp
         src/style.qss
         src/resources.qrc
+        src/drawingengine.h src/drawingengine.cpp
+        src/drawingwidget.h src/drawingwidget.cpp
+        src/shape.h src/shape.cpp
     )
 else()
     if(ANDROID)
