@@ -1,107 +1,73 @@
 #include "shape.h"
 #include "drawingengine.h"
-#include <QDataStream>
 #include <QtMath>
 
-//--------------------//
-//      LineShape     //
-//--------------------//
-
-void LineShape::draw(QImage &img) const {
-  // For thick lines, draw several parallel lines.
-  int half = lineThickness / 2;
-  for (int i = -half; i <= half; ++i) {
+/* -------- LineShape ---------------------------------------------------- */
+void LineShape::draw(QImage &im) const {
+  int h = lineThickness / 2;
+  for (int off = -h; off <= h; ++off) {
     if (useAntiAlias)
-      drawLineWu(img, p0.x(), p0.y() + i, p1.x(), p1.y() + i, drawingColor);
+      drawLineWu(im, p0.x(), p0.y() + off, p1.x(), p1.y() + off, drawingColor);
     else
-      drawLineDDA(img, p0.x(), p0.y() + i, p1.x(), p1.y() + i, drawingColor);
+      drawLineDDA(im, p0.x(), p0.y() + off, p1.x(), p1.y() + off, drawingColor);
   }
 }
-
-void LineShape::moveBy(int dx, int dy) {
-  p0 += QPoint(dx, dy);
-  p1 += QPoint(dx, dy);
-}
-
 void LineShape::write(QDataStream &out) const {
   out << p0 << p1 << drawingColor << lineThickness << useAntiAlias;
 }
-
 void LineShape::read(QDataStream &in) {
   in >> p0 >> p1 >> drawingColor >> lineThickness >> useAntiAlias;
 }
 
-//--------------------//
-//     CircleShape    //
-//--------------------//
-
-void CircleShape::draw(QImage &img) const {
-  if (lineThickness <= 1) {
-    // For a single pixel thick circle, just draw normally.
-    drawCircleMidpoint(img, center.x(), center.y(), radius, drawingColor);
-  } else {
-    int half = lineThickness / 2;
-    // For thick circles, draw multiple concentric circles.
-    for (int i = -half; i <= half; i++) {
-      int r = radius + i;
-      if (r > 0)
-        drawCircleMidpoint(img, center.x(), center.y(), r, drawingColor);
-    }
+/* -------- CircleShape -------------------------------------------------- */
+void CircleShape::draw(QImage &im) const {
+  if (useAntiAlias) {
+    drawCircleAA(im, center.x(), center.y(), radius, drawingColor);
+    return;
+  }
+  int h = lineThickness / 2;
+  for (int i = -h; i <= h; ++i) {
+    int r = radius + i;
+    if (r > 0)
+      drawCircleMidpoint(im, center.x(), center.y(), r, drawingColor);
   }
 }
-
-void CircleShape::moveBy(int dx, int dy) { center += QPoint(dx, dy); }
-
 void CircleShape::write(QDataStream &out) const {
   out << center << radius << drawingColor << lineThickness << useAntiAlias;
 }
-
 void CircleShape::read(QDataStream &in) {
   in >> center >> radius >> drawingColor >> lineThickness >> useAntiAlias;
 }
 
-//--------------------//
-//    PolygonShape    //
-//--------------------//
-
-void PolygonShape::draw(QImage &img) const {
-  int n = vertices.size();
-  if (n < 2)
+/* -------- PolygonShape ------------------------------------------------- */
+void PolygonShape::draw(QImage &im) const {
+  if (vertices.size() < 2)
     return;
-  // For each edge, draw it with the specified thickness.
-  int half = lineThickness / 2;
-  for (int i = 0; i < n; ++i) {
-    QPoint p0 = vertices[i];
-    QPoint p1 = vertices[(i + 1) % n]; // wrap around to close polygon
-    for (int offset = -half; offset <= half; ++offset) {
+  int h = lineThickness / 2;
+  for (int i = 0; i < vertices.size(); ++i) {
+    QPoint a = vertices[i], b = vertices[(i + 1) % vertices.size()];
+    for (int off = -h; off <= h; ++off) {
       if (useAntiAlias)
-        drawLineWu(img, p0.x(), p0.y() + offset, p1.x(), p1.y() + offset,
-                   drawingColor);
+        drawLineWu(im, a.x(), a.y() + off, b.x(), b.y() + off, drawingColor);
       else
-        drawLineDDA(img, p0.x(), p0.y() + offset, p1.x(), p1.y() + offset,
-                    drawingColor);
+        drawLineDDA(im, a.x(), a.y() + off, b.x(), b.y() + off, drawingColor);
     }
   }
 }
-
 void PolygonShape::moveBy(int dx, int dy) {
-  for (int i = 0; i < vertices.size(); ++i) {
-    vertices[i] += QPoint(dx, dy);
-  }
+  for (QPoint &pt : vertices)
+    pt += QPoint(dx, dy);
 }
-
 void PolygonShape::write(QDataStream &out) const {
   out << drawingColor << lineThickness << useAntiAlias;
-  out << vertices.size();
+  out << quint32(vertices.size());
   for (const QPoint &pt : vertices)
     out << pt;
 }
-
 void PolygonShape::read(QDataStream &in) {
-  int n = 0;
-  in >> drawingColor >> lineThickness >> useAntiAlias;
-  in >> n;
+  quint32 n;
+  in >> drawingColor >> lineThickness >> useAntiAlias >> n;
   vertices.resize(n);
-  for (int i = 0; i < n; ++i)
-    in >> vertices[i];
+  for (auto &i : vertices)
+    in >> i;
 }

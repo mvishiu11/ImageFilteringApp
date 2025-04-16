@@ -5,11 +5,12 @@
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
+#include <QFile>
 #include <QList>
 #include <QPoint>
 #include <QPushButton>
+#include <QSlider>
 #include <QSpinBox>
-#include <QVector>
 #include <QWidget>
 
 enum DrawingMode {
@@ -27,11 +28,6 @@ public:
   explicit DrawingWidget(QWidget *parent = nullptr);
   ~DrawingWidget() override;
 
-  void setMode(DrawingMode mode);
-  void setLineThickness(int thickness);
-  void setDrawingColor(const QColor &color);
-  void setAntiAliasingEnabled(bool enabled);
-
 public slots:
   void clearCanvas();
   void loadShapes();
@@ -39,56 +35,48 @@ public slots:
   void deleteSelectedShape();
 
 protected:
-  void paintEvent(QPaintEvent *event) override;
-  void resizeEvent(QResizeEvent *event) override;
-  void mousePressEvent(QMouseEvent *event) override;
-  void mouseMoveEvent(QMouseEvent *event) override;
-  void mouseReleaseEvent(QMouseEvent *event) override;
-  void mouseDoubleClickEvent(QMouseEvent *event) override;
+  void paintEvent(QPaintEvent *) override;
+  void resizeEvent(QResizeEvent *) override;
+  void mousePressEvent(QMouseEvent *) override;
+  void mouseMoveEvent(QMouseEvent *) override;
+  void mouseReleaseEvent(QMouseEvent *) override;
+  void mouseDoubleClickEvent(QMouseEvent *) override;
 
 private slots:
-  void onModeChanged(int idx);
-  void onThicknessChanged(int val);
+  void onModeChanged(int);
+  void onThicknessChanged(int);
   void onColorButtonClicked();
-  void onAntiAliasToggled(bool checked);
+  void onAntiAliasToggled(bool);
   void onClearButtonClicked();
   void onDeleteButtonClicked();
 
 private:
-  // persistent drawing canvas
-  QImage canvas;
-  // vector shapes
-  QList<Shape *> shapes;
-  Shape *selectedShape = nullptr;
-
-  // toolbar
+  /* gui widgets */
   QWidget *toolbarWidget;
   QComboBox *modeSelector;
   QSpinBox *thicknessSpin;
   QPushButton *colorButton;
   QCheckBox *antiAliasCheck;
-  QPushButton *clearButton;
-  QPushButton *deleteButton;
+  QPushButton *clearButton, *deleteButton;
   QSlider *zoomSlider;
 
-  // drawing state
-  DrawingMode currentMode;
-  int lineThickness;
-  QColor drawingColor;
-  bool antiAliasEnabled;
-  int zoomFactor{1};
+  /* persistent canvas + shapes */
+  QImage canvas;
+  QList<Shape *> shapes;
+  Shape *selectedShape = nullptr;
 
-  bool isDrawing;
+  /* state */
+  DrawingMode currentMode = DM_Line;
+  int lineThickness = 1;
+  QColor drawingColor = Qt::black;
+  bool antiAliasEnabled = true;
+  int zoomFactor = 1;
+
+  bool isDrawing = false;
   QVector<QPoint> currentPoints;
   QPoint lastMousePos;
 
-  // core routines
-  void commitCurrentShape();
-  void drawPreview(QPainter &p);
-  void selectShapeAt(const QPoint &pos);
-  void moveSelectedShape(const QPoint &delta);
-
-  enum ShapeType : quint8 { ST_Line = 1, ST_Circle = 2, ST_Polygon = 3 };
+  /* hit‑test info */
   enum HitType {
     None,
     LineP0,
@@ -101,13 +89,12 @@ private:
   HitType hit = None;
   int hitIndex = -1;
 
-  QPoint mapToCanvas(const QPoint &p) const {
-    int ox = (width() - canvas.width() * zoomFactor) / 2;
-    int oy = toolbarWidget->height();
-    return QPoint((p.x() - ox) / zoomFactor, (p.y() - oy) / zoomFactor);
-  }
-
+  /* helpers */
+  QPoint mapToCanvas(const QPoint &p) const;
+  void drawPreview(QPainter &);
+  void commitCurrentShape();
+  void selectShapeAt(const QPoint &);
+  void moveSelectedShape(const QPoint &);
   void redrawAllShapes();
 };
-
-#endif // DRAWINGWIDGET_H
+#endif
