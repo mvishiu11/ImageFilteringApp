@@ -30,10 +30,25 @@ void drawLineDDA(QImage &img, int x0, int y0, int x1, int y1,
   }
 }
 
-void drawLineWu(QImage &img, int x0, int y0, int x1, int y1,
-                const QColor &color) {
-  // Implementation based on Xiaolin Wu algorithm.
-  // For brevity, here is a simplified version.
+static inline void blendPixel(QImage &im, int x, int y, double c,
+                              const QColor &col) {
+  if (x < 0 || y < 0 || x >= im.width() || y >= im.height())
+    return;
+  QRgb src = im.pixel(x, y);
+  auto sr = qRed(src), sg = qGreen(src), sb = qBlue(src);
+  auto dr = col.red(), dg = col.green(), db = col.blue();
+  auto rr = int(sr * (1 - c) + dr * c);
+  auto gg = int(sg * (1 - c) + dg * c);
+  auto bb = int(sb * (1 - c) + db * c);
+  im.setPixel(x, y, qRgb(rr, gg, bb));
+}
+
+static inline int ipart(double x) { return int(std::floor(x)); }
+static inline double fpart(double x) { return x - std::floor(x); }
+static inline double rfpart(double x) { return 1.0 - fpart(x); }
+
+/* True Xiaolin‑Wu */
+void drawLineWu(QImage &im, int x0, int y0, int x1, int y1, const QColor &col) {
   bool steep = std::abs(y1 - y0) > std::abs(x1 - x0);
   if (steep) {
     std::swap(x0, y0);
@@ -43,18 +58,49 @@ void drawLineWu(QImage &img, int x0, int y0, int x1, int y1,
     std::swap(x0, x1);
     std::swap(y0, y1);
   }
-  int dx = x1 - x0;
-  int dy = y1 - y0;
-  double gradient = dx == 0 ? 1 : double(dy) / dx;
-  // For endpoints, we simply use rounding (more detailed implementation would
-  // blend edge pixels).
-  for (int x = x0; x <= x1; ++x) {
-    double y = y0 + gradient * (x - x0);
-    int iy = int(round(y));
-    if (steep)
-      setPixelSafe(img, iy, x, color);
-    else
-      setPixelSafe(img, x, iy, color);
+
+  double dx = x1 - x0, dy = y1 - y0;
+  double grad = dx == 0 ? 0 : dy / dx;
+
+  // first end‑point
+  double xend = std::round(x0);
+  double yend = y0 + grad * (xend - x0);
+  double xgap = rfpart(x0 + 0.5);
+  int ix = int(xend);
+  int iy = ipart(yend);
+  if (steep) {
+    blendPixel(im, iy, ix, rfpart(yend) * xgap, col);
+    blendPixel(im, iy + 1, ix, fpart(yend) * xgap, col);
+  } else {
+    blendPixel(im, ix, iy, rfpart(yend) * xgap, col);
+    blendPixel(im, ix, iy + 1, fpart(yend) * xgap, col);
+  }
+  double intery = yend + grad;
+
+  // second end‑point
+  xend = std::round(x1);
+  yend = y1 + grad * (xend - x1);
+  xgap = fpart(x1 + 0.5);
+  int ix2 = int(xend);
+  iy = ipart(yend);
+  if (steep) {
+    blendPixel(im, iy, ix2, rfpart(yend) * xgap, col);
+    blendPixel(im, iy + 1, ix2, fpart(yend) * xgap, col);
+  } else {
+    blendPixel(im, ix2, iy, rfpart(yend) * xgap, col);
+    blendPixel(im, ix2, iy + 1, fpart(yend) * xgap, col);
+  }
+
+  // main loop
+  for (int x = ix + 1; x < ix2; ++x) {
+    if (steep) {
+      blendPixel(im, ipart(intery), x, rfpart(intery), col);
+      blendPixel(im, ipart(intery) + 1, x, fpart(intery), col);
+    } else {
+      blendPixel(im, x, ipart(intery), rfpart(intery), col);
+      blendPixel(im, x, ipart(intery) + 1, fpart(intery), col);
+    }
+    intery += grad;
   }
 }
 

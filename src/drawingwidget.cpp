@@ -7,9 +7,9 @@
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <cmath>
-#include <utility>
 
 DrawingWidget::DrawingWidget(QWidget *parent)
     : QWidget(parent), currentMode(DM_Line), lineThickness(1),
@@ -51,6 +51,26 @@ DrawingWidget::DrawingWidget(QWidget *parent)
   deleteButton = new QPushButton("Delete");
   toolbarLayout->addWidget(deleteButton);
 
+  QToolButton *loadBtn = new QToolButton;
+  loadBtn->setIcon(QIcon(":/icons/folder-open.svg"));
+  QToolButton *saveBtn = new QToolButton;
+  saveBtn->setIcon(QIcon(":/icons/disk.svg"));
+  toolbarLayout->addWidget(loadBtn);
+  toolbarLayout->addWidget(saveBtn);
+
+  zoomSlider = new QSlider(Qt::Horizontal);
+  zoomSlider->setRange(1, 8);
+  zoomSlider->setValue(1);
+  toolbarLayout->addWidget(new QLabel("Zoom"));
+  toolbarLayout->addWidget(zoomSlider);
+
+  connect(loadBtn, &QToolButton::clicked, this, &DrawingWidget::loadShapes);
+  connect(saveBtn, &QToolButton::clicked, this, &DrawingWidget::saveShapes);
+  connect(zoomSlider, &QSlider::valueChanged, this, [this](int v) {
+    zoomFactor = v;
+    update();
+  });
+
   toolbarWidget->setLayout(toolbarLayout);
 
   // === main layout ===
@@ -86,7 +106,9 @@ DrawingWidget::~DrawingWidget() { qDeleteAll(shapes); }
 void DrawingWidget::onModeChanged(int idx) {
   setMode(static_cast<DrawingMode>(modeSelector->itemData(idx).toInt()));
 }
+
 void DrawingWidget::onThicknessChanged(int v) { setLineThickness(v); }
+
 void DrawingWidget::onColorButtonClicked() {
   QColor c = QColorDialog::getColor(drawingColor, this, "Select Color");
   if (!c.isValid())
@@ -95,6 +117,7 @@ void DrawingWidget::onColorButtonClicked() {
   colorButton->setStyleSheet(
       QString("background-color:%1; color:white;").arg(c.name()));
 }
+
 void DrawingWidget::onAntiAliasToggled(bool chk) {
   setAntiAliasingEnabled(chk);
   // redraw *all* committed shapes with new AA flag:
@@ -105,7 +128,9 @@ void DrawingWidget::onAntiAliasToggled(bool chk) {
   }
   update();
 }
+
 void DrawingWidget::onClearButtonClicked() { clearCanvas(); }
+
 void DrawingWidget::onDeleteButtonClicked() { deleteSelectedShape(); }
 
 // --- public slots ---
@@ -116,20 +141,72 @@ void DrawingWidget::clearCanvas() {
   selectedShape = nullptr;
   update();
 }
+
 void DrawingWidget::loadShapes() {
-  auto fn = QFileDialog::getOpenFileName(this, "Load Shapes", "",
-                                         "Shape Files (*.shp)");
+  QString fn =
+      QFileDialog::getOpenFileName(this, "Load Shapes", "", "Shape (*.shp)");
   if (fn.isEmpty())
     return;
-  // TODO: implement full serialization
+  QFile f(fn);
+  if (!f.open(QIODevice::ReadOnly))
+    return;
+  QDataStream in(&f);
+  in.setVersion(QDataStream::Qt_6_0);
+  char hdr[4];
+  if (in.readRawData(hdr, 4) != 4 || strncmp(hdr, "VECT", 4) != 0)
+    return;
+  quint32 count;
+  in >> count;
+  clearCanvas(); // wipe current
+  for (quint32 i = 0; i < count; ++i) {
+    quint8 t;
+    in >> t;
+    Shape *s = nullptr;
+    if (t == ST_Line)
+      s = new LineShape;
+    if (t == ST_Circle)
+      s = new CircleShape;
+    if (t == ST_Polygon)
+      s = new PolygonShape;
+    if (!s) {
+      in.skipRawData(1);
+      continue;
+    }
+    s->read(in);
+    shapes.append(s);
+    s->draw(canvas);
+  }
+  update();
 }
+
 void DrawingWidget::saveShapes() {
-  auto fn = QFileDialog::getSaveFileName(this, "Save Shapes", "",
-                                         "Shape Files (*.shp)");
+  QString fn =
+      QFileDialog::getSaveFileName(this, "Save Shapes", "", "Shape (*.shp)");
   if (fn.isEmpty())
     return;
-  // TODO: implement full serialization
+  QFile f(fn);
+  if (!f.open(QIODevice::WriteOnly))
+    return;
+  QDataStream out(&f);
+  out.setVersion(QDataStream::Qt_6_0);
+  out.writeRawData("VECT", 4);
+  out << quint32(shapes.size());
+  for (auto *s : shapes) {
+    if (auto *L = dynamic_cast<LineShape *>(s)) {
+      out << quint8(ST_Line);
+      L->write(out);
+    }
+    if (auto *C = dynamic_cast<CircleShape *>(s)) {
+      out << quint8(ST_Circle);
+      C->write(out);
+    }
+    if (auto *P = dynamic_cast<PolygonShape *>(s)) {
+      out << quint8(ST_Polygon);
+      P->write(out);
+    }
+  }
 }
+
 void DrawingWidget::deleteSelectedShape() {
   if (!selectedShape)
     return;
@@ -159,7 +236,11 @@ void DrawingWidget::paintEvent(QPaintEvent *) {
   QPainter p(this);
   int ox = (width() - canvas.width()) / 2;
   int oy = toolbarWidget->height();
-  p.drawImage(ox, oy, canvas);
+
+  p.translate(ox, oy);
+  p.scale(zoomFactor, zoomFactor);
+  p.drawImage(0, 0, canvas);
+  p.resetTransform();
 
   // selection highlight
   if (currentMode == DM_Selection && selectedShape) {
@@ -238,6 +319,12 @@ void DrawingWidget::drawPreview(QPainter &painter) {
   painter.drawImage(ox, oy, tmp);
 }
 
+void DrawingWidget::redrawAllShapes() {
+  canvas.fill(Qt::white);
+  for (auto *s : shapes)
+    s->draw(canvas);
+}
+
 // --- mouse handling ---
 void DrawingWidget::mousePressEvent(QMouseEvent *event) {
   QPoint pos = mapToCanvas(event->pos());
@@ -262,12 +349,26 @@ void DrawingWidget::mousePressEvent(QMouseEvent *event) {
 
 void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
   QPoint pos = mapToCanvas(ev->pos());
-  if (currentMode == DM_Selection) {
-    if (selectedShape) {
-      QPoint d = pos - lastMousePos;
-      moveSelectedShape(d);
-      lastMousePos = pos;
+  if (currentMode == DM_Selection && selectedShape &&
+      (ev->buttons() & Qt::LeftButton)) {
+    QPoint delta = pos - lastMousePos;
+    if (auto *L = dynamic_cast<LineShape *>(selectedShape)) {
+      if (hit == LineP0)
+        L->p0 += delta;
+      else if (hit == LineP1)
+        L->p1 += delta;
+    } else if (auto *C = dynamic_cast<CircleShape *>(selectedShape)) {
+      if (hit == CircCenter)
+        C->center += delta;
+      else if (hit == CircEdge)
+        C->radius =
+            int(std::hypot(pos.x() - C->center.x(), pos.y() - C->center.y()));
     }
+    // polygon vertex drag similar
+    lastMousePos = pos;
+    redrawAllShapes();
+    update();
+    return;
   } else if (isDrawing) {
     if (currentMode == DM_Polygon) {
       if (!currentPoints.isEmpty())
@@ -384,24 +485,49 @@ void DrawingWidget::commitCurrentShape() {
   shapes.append(ns);
 }
 
+enum HitType {
+  None,
+  LineP0,
+  LineP1,
+  CircCenter,
+  CircEdge,
+  PolyVertex,
+  PolyBody
+};
+HitType hit = None;
+int hitIndex = -1;
+
 void DrawingWidget::selectShapeAt(const QPoint &pos) {
-  const int T = 10;
+  const int T = 7;
   selectedShape = nullptr;
-  for (auto *s : std::as_const(shapes)) {
+  hit = None;
+  for (auto *s : shapes) {
     if (auto *L = dynamic_cast<LineShape *>(s)) {
-      if ((pos - L->p0).manhattanLength() < T ||
-          (pos - L->p1).manhattanLength() < T) {
+      if ((pos - L->p0).manhattanLength() < T) {
         selectedShape = L;
-        break;
+        hit = LineP0;
+        return;
       }
-    } else if (auto *C = dynamic_cast<CircleShape *>(s)) {
-      int dx = pos.x() - C->center.x(), dy = pos.y() - C->center.y(),
-          d = int(std::sqrt(dx * dx + dy * dy));
+      if ((pos - L->p1).manhattanLength() < T) {
+        selectedShape = L;
+        hit = LineP1;
+        return;
+      }
+    }
+    if (auto *C = dynamic_cast<CircleShape *>(s)) {
+      if ((pos - C->center).manhattanLength() < T) {
+        selectedShape = C;
+        hit = CircCenter;
+        return;
+      }
+      int d = int(std::hypot(pos.x() - C->center.x(), pos.y() - C->center.y()));
       if (std::abs(d - C->radius) < T) {
         selectedShape = C;
-        break;
+        hit = CircEdge;
+        return;
       }
-    } else if (auto *P = dynamic_cast<PolygonShape *>(s)) {
+    }
+    if (auto *P = dynamic_cast<PolygonShape *>(s)) {
       for (auto &pt : P->vertices) {
         if ((pos - pt).manhattanLength() < T) {
           selectedShape = P;

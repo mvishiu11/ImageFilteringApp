@@ -69,12 +69,14 @@ private:
   QCheckBox *antiAliasCheck;
   QPushButton *clearButton;
   QPushButton *deleteButton;
+  QSlider *zoomSlider;
 
   // drawing state
   DrawingMode currentMode;
   int lineThickness;
   QColor drawingColor;
   bool antiAliasEnabled;
+  int zoomFactor{1};
 
   bool isDrawing;
   QVector<QPoint> currentPoints;
@@ -86,11 +88,26 @@ private:
   void selectShapeAt(const QPoint &pos);
   void moveSelectedShape(const QPoint &delta);
 
+  enum ShapeType : quint8 { ST_Line = 1, ST_Circle = 2, ST_Polygon = 3 };
+  enum HitType {
+    None,
+    LineP0,
+    LineP1,
+    CircCenter,
+    CircEdge,
+    PolyVertex,
+    PolyBody
+  };
+  HitType hit = None;
+  int hitIndex = -1;
+
   QPoint mapToCanvas(const QPoint &p) const {
-    int ox = (width() - canvas.width()) / 2;
+    int ox = (width() - canvas.width() * zoomFactor) / 2;
     int oy = toolbarWidget->height();
-    return p - QPoint(ox, oy);
+    return QPoint((p.x() - ox) / zoomFactor, (p.y() - oy) / zoomFactor);
   }
+
+  void redrawAllShapes();
 };
 
 #endif // DRAWINGWIDGET_H
