@@ -79,21 +79,19 @@ void PolygonShape::read(QDataStream &in) {
     in >> i;
 }
 
-/* -------- Pill Shape ------------------------------------------------- */
+/* -------- PillShape ------------------------------------------------- */
 
 void PillShape::draw(QImage &im) const {
   auto drawLine = useAntiAlias ? drawLineWu : drawLineDDA;
   auto drawCap = useAntiAlias ? drawHalfCircleWu : drawHalfCircleMidpoint;
 
   double vx = p1.x() - p0.x(), vy = p1.y() - p0.y();
-  double len = std::hypot(vx, vy);
+  double len = sqrt(vx*vx + vy*vy);
   if (len == 0)
     return;
   double nx = -vy / len, ny = vx / len;
 
-  auto iOfs = [&](double u) { return int(std::round(u)); };
-
-  QPoint ofs(iOfs(nx * radius), iOfs(ny * radius));
+  QPoint ofs(int(std::round(nx * radius)), int(std::round(ny * radius)));
 
   QPoint a0 = p0 + ofs;
   QPoint b0 = p1 + ofs;
