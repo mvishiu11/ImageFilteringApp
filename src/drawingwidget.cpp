@@ -24,6 +24,7 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   modeSelector->addItem("Circle", DM_Circle);
   modeSelector->addItem("Polygon", DM_Polygon);
   modeSelector->addItem("Pen", DM_Pen);
+  modeSelector->addItem("Pill", DM_Pill);
   modeSelector->addItem("Select", DM_Selection);
 
   thicknessSpin = new QSpinBox;
@@ -65,7 +66,7 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   setLayout(ml);
 
   /* canvas ----------------------------------------------------------- */
-  canvas = QImage(800, 600, QImage::Format_RGB32);
+  canvas = QImage(1000, 800, QImage::Format_RGB32);
   canvas.fill(Qt::white);
 
   /* connections ------------------------------------------------------ */
@@ -100,7 +101,9 @@ void DrawingWidget::onModeChanged(int i) {
   currentPoints.clear();
   update();
 }
+
 void DrawingWidget::onThicknessChanged(int v) { lineThickness = v; }
+
 void DrawingWidget::onColorButtonClicked() {
   QColor c = QColorDialog::getColor(drawingColor, this);
   if (c.isValid()) {
@@ -109,6 +112,7 @@ void DrawingWidget::onColorButtonClicked() {
         QString("background-color:%1; color:white;").arg(c.name()));
   }
 }
+
 void DrawingWidget::onAntiAliasToggled(bool b) {
   antiAliasEnabled = b;
   for (auto *s : shapes)
@@ -116,6 +120,7 @@ void DrawingWidget::onAntiAliasToggled(bool b) {
   redrawAllShapes();
   update();
 }
+
 void DrawingWidget::onClearButtonClicked() { clearCanvas(); }
 void DrawingWidget::onDeleteButtonClicked() { deleteSelectedShape(); }
 
@@ -127,6 +132,7 @@ void DrawingWidget::clearCanvas() {
   selectedShape = nullptr;
   update();
 }
+
 void DrawingWidget::saveShapes() {
   QString fn =
       QFileDialog::getSaveFileName(this, "Save Shapes", "", "Shape (*.shp)");
@@ -148,9 +154,12 @@ void DrawingWidget::saveShapes() {
     } else if (dynamic_cast<PolygonShape *>(s)) {
       out << quint8(3);
       s->write(out);
+    } if (dynamic_cast<PillShape *>(s)) {
+        out << quint8(4); s->write(out);
     }
   }
 }
+
 void DrawingWidget::loadShapes() {
   QString fn =
       QFileDialog::getOpenFileName(this, "Load Shapes", "", "Shape (*.shp)");
@@ -176,6 +185,8 @@ void DrawingWidget::loadShapes() {
       s = new CircleShape;
     if (t == 3)
       s = new PolygonShape;
+    if (t == 4)
+      s = new PillShape;
     if (!s) {
       f.close();
       return;
@@ -186,6 +197,7 @@ void DrawingWidget::loadShapes() {
   }
   update();
 }
+
 void DrawingWidget::deleteSelectedShape() {
   if (!selectedShape)
     return;
@@ -202,6 +214,7 @@ QPoint DrawingWidget::mapToCanvas(const QPoint &p) const {
   int oy = toolbarWidget->height();
   return QPoint((p.x() - ox) / zoomFactor, (p.y() - oy) / zoomFactor);
 }
+
 void DrawingWidget::redrawAllShapes() {
   canvas.fill(Qt::white);
   for (auto *s : shapes)
@@ -255,17 +268,28 @@ void DrawingWidget::drawPreview(QPainter &p) {
   QImage tmp = canvas; // local copy
   if ((currentMode == DM_Line || currentMode == DM_ThickLine) &&
       currentPoints.size() >= 2) {
-    int h = (currentMode == DM_ThickLine) ? lineThickness / 2 : 0;
-    for (int off = -h; off <= h; ++off) {
-      if (antiAliasEnabled)
-        drawLineWu(tmp, currentPoints[0].x(), currentPoints[0].y() + off,
-                   currentPoints[1].x(), currentPoints[1].y() + off,
-                   drawingColor);
-      else
-        drawLineDDA(tmp, currentPoints[0].x(), currentPoints[0].y() + off,
-                    currentPoints[1].x(), currentPoints[1].y() + off,
-                    drawingColor);
-    }
+      auto drawThin = antiAliasEnabled ? drawLineWu : drawLineDDA;
+      int dx = currentPoints[1].x() - currentPoints[0].x();
+      int dy = currentPoints[1].y() - currentPoints[0].y();
+      bool horizontalish = std::abs(dx) >= std::abs(dy);
+      int h = lineThickness/2;
+
+      for (int off = -h; off <= h; ++off) {
+          if (horizontalish)
+              drawThin(tmp,
+                       currentPoints[0].x(),
+                       currentPoints[0].y() + off,
+                       currentPoints[1].x(),
+                       currentPoints[1].y() + off,
+                       drawingColor);
+          else
+              drawThin(tmp,
+                       currentPoints[0].x() + off,
+                       currentPoints[0].y(),
+                       currentPoints[1].x() + off,
+                       currentPoints[1].y(),
+                       drawingColor);
+      }
   } else if (currentMode == DM_Circle && currentPoints.size() >= 2) {
     int dx = currentPoints[1].x() - currentPoints[0].x();
     int dy = currentPoints[1].y() - currentPoints[0].y();
@@ -274,6 +298,11 @@ void DrawingWidget::drawPreview(QPainter &p) {
                        drawingColor);
   } else if (currentMode == DM_Pen) {
     drawFreehandPen(tmp, currentPoints, drawingColor);
+  } else if (currentMode == DM_Pill && currentPoints.size() >= 2) {
+      int rad = std::max(1, thicknessSpin->value());
+      PillShape tmpShape(currentPoints[0], currentPoints[1],
+                         rad, drawingColor, lineThickness, antiAliasEnabled);
+      tmpShape.draw(tmp);                     // draw on the temporary image
   }
   if (currentMode == DM_Polygon && currentPoints.size() >= 2) {
     QPainter tp(&tmp);
@@ -314,6 +343,7 @@ void DrawingWidget::mousePressEvent(QMouseEvent *ev) {
   }
   update();
 }
+
 void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
   QPoint pos = mapToCanvas(ev->pos());
   if (currentMode == DM_Selection && selectedShape &&
@@ -341,6 +371,13 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
         P->vertices[hitIndex] += delta;
       else if (hit == PolyBody)
         P->moveBy(delta.x(), delta.y());
+    } else if (auto *Pill = dynamic_cast<PillShape *>(selectedShape)) {
+        if (hit == PillP0)
+            Pill->p0 += delta;                    // stretch / shrink
+        else if (hit == PillP1)
+            Pill->p1 += delta;
+        else if (hit == PolyBody)
+            Pill->moveBy(delta.x(), delta.y());   // move whole pill
     }
     redrawAllShapes();
     update();
@@ -384,6 +421,7 @@ void DrawingWidget::mouseReleaseEvent(QMouseEvent *ev) {
   }
   update();
 }
+
 void DrawingWidget::mouseDoubleClickEvent(QMouseEvent *ev) {
   if (currentMode == DM_Polygon && isDrawing && currentPoints.size() >= 3) {
     commitCurrentShape();
@@ -403,6 +441,7 @@ void DrawingWidget::mouseDoubleClickEvent(QMouseEvent *ev) {
     }
   }
 }
+
 void DrawingWidget::resizeEvent(QResizeEvent *e) {
   QWidget::resizeEvent(e);
   update();
@@ -429,6 +468,11 @@ void DrawingWidget::commitCurrentShape() {
       return;
     ns = new PolygonShape(currentPoints, drawingColor, lineThickness,
                           antiAliasEnabled);
+  } else if (currentMode == DM_Pill) {
+      if (currentPoints.size() < 2) return;
+      int rad = std::max(1, thicknessSpin->value());
+      ns = new PillShape(currentPoints[0], currentPoints[1],
+                         rad, drawingColor, lineThickness, antiAliasEnabled);
   }
   if (!ns)
     return;
@@ -499,6 +543,17 @@ void DrawingWidget::selectShapeAt(const QPoint &pos) {
         hit = PolyBody;
         return;
       }
+    } else if (auto *Pill = dynamic_cast<PillShape *>(s)) {
+        if ((pos - Pill->p0).manhattanLength() < T) {
+            selectedShape = Pill;  hit = PillP0;  return;
+        }
+        if ((pos - Pill->p1).manhattanLength() < T) {
+            selectedShape = Pill;  hit = PillP1;  return;
+        }
+        double d = distToSegment(Pill->p0, Pill->p1);
+        if (d < T) {
+            selectedShape = Pill;  hit = PolyBody;  return;
+        }
     }
   }
 }

@@ -19,6 +19,7 @@ enum DrawingMode {
   DM_Circle,
   DM_Polygon,
   DM_Pen,
+  DM_Pill,
   DM_Selection
 };
 
@@ -85,7 +86,9 @@ private:
     CircCenter,
     CircEdge,
     PolyVertex,
-    PolyBody
+    PolyBody,
+    PillP0,
+    PillP1
   };
   HitType hit = None;
   int hitIndex = -1;
