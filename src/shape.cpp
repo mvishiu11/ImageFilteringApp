@@ -4,28 +4,18 @@
 
 /* -------- LineShape ---------------------------------------------------- */
 void LineShape::draw(QImage &im) const {
-    auto drawThin = useAntiAlias ? drawLineWu : drawLineDDA;
-    int dx = p1.x() - p0.x();
-    int dy = p1.y() - p0.y();
-    bool horizontalish = std::abs(dx) >= std::abs(dy);
-    int h = lineThickness/2;
+  auto drawThin = useAntiAlias ? drawLineWu : drawLineDDA;
+  int dx = p1.x() - p0.x();
+  int dy = p1.y() - p0.y();
+  bool horizontalish = std::abs(dx) >= std::abs(dy);
+  int h = lineThickness / 2;
 
-    for (int off = -h; off <= h; ++off) {
-        if (horizontalish)
-            drawThin(im,
-                     p0.x(),
-                     p0.y() + off,
-                     p1.x(),
-                     p1.y() + off,
-                     drawingColor);
-        else
-            drawThin(im,
-                     p0.x() + off,
-                     p0.y(),
-                     p1.x() + off,
-                     p1.y(),
-                     drawingColor);
-    }
+  for (int off = -h; off <= h; ++off) {
+    if (horizontalish)
+      drawThin(im, p0.x(), p0.y() + off, p1.x(), p1.y() + off, drawingColor);
+    else
+      drawThin(im, p0.x() + off, p0.y(), p1.x() + off, p1.y(), drawingColor);
+  }
 }
 void LineShape::write(QDataStream &out) const {
   out << p0 << p1 << drawingColor << lineThickness << useAntiAlias;
@@ -91,33 +81,35 @@ void PolygonShape::read(QDataStream &in) {
 
 /* -------- Pill Shape ------------------------------------------------- */
 
-void PillShape::draw(QImage &im) const
-{
-    auto drawLine = useAntiAlias ? drawLineWu : drawLineDDA;
-    auto drawCap  = useAntiAlias ? drawHalfCircleWu : drawHalfCircleMidpoint;
+void PillShape::draw(QImage &im) const {
+  auto drawLine = useAntiAlias ? drawLineWu : drawLineDDA;
+  auto drawCap = useAntiAlias ? drawHalfCircleWu : drawHalfCircleMidpoint;
 
-    double vx = p1.x() - p0.x(),  vy = p1.y() - p0.y();
-    double len = std::hypot(vx,vy); if(len == 0) return;
-    double nx = -vy/len,          ny = vx/len;
+  double vx = p1.x() - p0.x(), vy = p1.y() - p0.y();
+  double len = std::hypot(vx, vy);
+  if (len == 0)
+    return;
+  double nx = -vy / len, ny = vx / len;
 
-    QPoint a0(p0.x()+nx*radius, p0.y()+ny*radius);
-    QPoint b0(p1.x()+nx*radius, p1.y()+ny*radius);
-    QPoint a1(p0.x()-nx*radius, p0.y()-ny*radius);
-    QPoint b1(p1.x()-nx*radius, p1.y()-ny*radius);
+  auto iOfs = [&](double u) { return int(std::round(u)); };
 
-    drawLine(im, a0.x(),a0.y(), b0.x(),b0.y(), drawingColor);
-    drawLine(im, a1.x(),a1.y(), b1.x(),b1.y(), drawingColor);
+  QPoint ofs(iOfs(nx * radius), iOfs(ny * radius));
 
-    drawCap(im, p0.x(), p0.y(), radius, -vx, -vy, drawingColor);
-    drawCap(im, p1.x(), p1.y(), radius,  vx,  vy, drawingColor);
+  QPoint a0 = p0 + ofs;
+  QPoint b0 = p1 + ofs;
+  QPoint a1 = p0 - ofs;
+  QPoint b1 = p1 - ofs;
+
+  drawLine(im, a0.x(), a0.y(), b0.x(), b0.y(), drawingColor);
+  drawLine(im, a1.x(), a1.y(), b1.x(), b1.y(), drawingColor);
+
+  drawCap(im, p0.x(), p0.y(), radius, -vx, -vy, drawingColor);
+  drawCap(im, p1.x(), p1.y(), radius, vx, vy, drawingColor);
 }
 
 void PillShape::write(QDataStream &out) const {
-    out << p0 << p1 << radius
-        << drawingColor << lineThickness << useAntiAlias;
+  out << p0 << p1 << radius << drawingColor << lineThickness << useAntiAlias;
 }
 void PillShape::read(QDataStream &in) {
-    in >> p0 >> p1 >> radius
-        >> drawingColor >> lineThickness >> useAntiAlias;
+  in >> p0 >> p1 >> radius >> drawingColor >> lineThickness >> useAntiAlias;
 }
-
