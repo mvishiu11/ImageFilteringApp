@@ -15,11 +15,11 @@ void drawCircleMidpoint(QImage &img, int xc, int yc, int r, const QColor &c);
 
 void drawCircleWu(QImage &img, int xc, int yc, int r, const QColor &col);
 
-void drawHalfCircleMidpoint(QImage &img,int xc,int yc,int r,
-                            double nx,double ny,const QColor &col);
+void drawHalfCircleMidpoint(QImage &img, int xc, int yc, int r, double nx,
+                            double ny, const QColor &col);
 
-void drawHalfCircleWu(QImage &img,int xc,int yc,int r,
-                      double nx,double ny,const QColor &col);
+void drawHalfCircleWu(QImage &img, int xc, int yc, int r, double nx, double ny,
+                      const QColor &col);
 
 void drawFreehandPen(QImage &img, const QVector<QPoint> &points,
                      const QColor &color);

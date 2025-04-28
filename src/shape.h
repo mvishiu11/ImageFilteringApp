@@ -65,20 +65,21 @@ public:
 
 class PillShape : public Shape {
 public:
-    PillShape() = default;
-    PillShape(const QPoint &c0, const QPoint &c1, int rad,
-              const QColor &col, int thick, bool aa)
-        : Shape(col, thick, aa), p0(c0), p1(c1), radius(rad) {}
+  PillShape() = default;
+  PillShape(const QPoint &c0, const QPoint &c1, int rad, const QColor &col,
+            int thick, bool aa)
+      : Shape(col, thick, aa), p0(c0), p1(c1), radius(rad) {}
 
-    void draw(QImage &) const override;
-    void moveBy(int dx, int dy) override {
-        p0 += QPoint(dx,dy);  p1 += QPoint(dx,dy);
-    }
-    void write(QDataStream &) const override;
-    void read(QDataStream &) override;
+  void draw(QImage &) const override;
+  void moveBy(int dx, int dy) override {
+    p0 += QPoint(dx, dy);
+    p1 += QPoint(dx, dy);
+  }
+  void write(QDataStream &) const override;
+  void read(QDataStream &) override;
 
-    QPoint p0, p1;
-    int    radius;
+  QPoint p0, p1;
+  int radius;
 };
 
 #endif

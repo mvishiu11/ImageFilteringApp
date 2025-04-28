@@ -154,8 +154,10 @@ void DrawingWidget::saveShapes() {
     } else if (dynamic_cast<PolygonShape *>(s)) {
       out << quint8(3);
       s->write(out);
-    } if (dynamic_cast<PillShape *>(s)) {
-        out << quint8(4); s->write(out);
+    }
+    if (dynamic_cast<PillShape *>(s)) {
+      out << quint8(4);
+      s->write(out);
     }
   }
 }
@@ -268,28 +270,22 @@ void DrawingWidget::drawPreview(QPainter &p) {
   QImage tmp = canvas; // local copy
   if ((currentMode == DM_Line || currentMode == DM_ThickLine) &&
       currentPoints.size() >= 2) {
-      auto drawThin = antiAliasEnabled ? drawLineWu : drawLineDDA;
-      int dx = currentPoints[1].x() - currentPoints[0].x();
-      int dy = currentPoints[1].y() - currentPoints[0].y();
-      bool horizontalish = std::abs(dx) >= std::abs(dy);
-      int h = lineThickness/2;
+    auto drawThin = antiAliasEnabled ? drawLineWu : drawLineDDA;
+    int dx = currentPoints[1].x() - currentPoints[0].x();
+    int dy = currentPoints[1].y() - currentPoints[0].y();
+    bool horizontalish = std::abs(dx) >= std::abs(dy);
+    int h = lineThickness / 2;
 
-      for (int off = -h; off <= h; ++off) {
-          if (horizontalish)
-              drawThin(tmp,
-                       currentPoints[0].x(),
-                       currentPoints[0].y() + off,
-                       currentPoints[1].x(),
-                       currentPoints[1].y() + off,
-                       drawingColor);
-          else
-              drawThin(tmp,
-                       currentPoints[0].x() + off,
-                       currentPoints[0].y(),
-                       currentPoints[1].x() + off,
-                       currentPoints[1].y(),
-                       drawingColor);
-      }
+    for (int off = -h; off <= h; ++off) {
+      if (horizontalish)
+        drawThin(tmp, currentPoints[0].x(), currentPoints[0].y() + off,
+                 currentPoints[1].x(), currentPoints[1].y() + off,
+                 drawingColor);
+      else
+        drawThin(tmp, currentPoints[0].x() + off, currentPoints[0].y(),
+                 currentPoints[1].x() + off, currentPoints[1].y(),
+                 drawingColor);
+    }
   } else if (currentMode == DM_Circle && currentPoints.size() >= 2) {
     int dx = currentPoints[1].x() - currentPoints[0].x();
     int dy = currentPoints[1].y() - currentPoints[0].y();
@@ -299,10 +295,10 @@ void DrawingWidget::drawPreview(QPainter &p) {
   } else if (currentMode == DM_Pen) {
     drawFreehandPen(tmp, currentPoints, drawingColor);
   } else if (currentMode == DM_Pill && currentPoints.size() >= 2) {
-      int rad = std::max(1, thicknessSpin->value());
-      PillShape tmpShape(currentPoints[0], currentPoints[1],
-                         rad, drawingColor, lineThickness, antiAliasEnabled);
-      tmpShape.draw(tmp);                     // draw on the temporary image
+    int rad = std::max(1, thicknessSpin->value());
+    PillShape tmpShape(currentPoints[0], currentPoints[1], rad, drawingColor,
+                       lineThickness, antiAliasEnabled);
+    tmpShape.draw(tmp); // draw on the temporary image
   }
   if (currentMode == DM_Polygon && currentPoints.size() >= 2) {
     QPainter tp(&tmp);
@@ -372,12 +368,12 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
       else if (hit == PolyBody)
         P->moveBy(delta.x(), delta.y());
     } else if (auto *Pill = dynamic_cast<PillShape *>(selectedShape)) {
-        if (hit == PillP0)
-            Pill->p0 += delta;                    // stretch / shrink
-        else if (hit == PillP1)
-            Pill->p1 += delta;
-        else if (hit == PolyBody)
-            Pill->moveBy(delta.x(), delta.y());   // move whole pill
+      if (hit == PillP0)
+        Pill->p0 += delta; // stretch / shrink
+      else if (hit == PillP1)
+        Pill->p1 += delta;
+      else if (hit == PolyBody)
+        Pill->moveBy(delta.x(), delta.y()); // move whole pill
     }
     redrawAllShapes();
     update();
@@ -469,10 +465,11 @@ void DrawingWidget::commitCurrentShape() {
     ns = new PolygonShape(currentPoints, drawingColor, lineThickness,
                           antiAliasEnabled);
   } else if (currentMode == DM_Pill) {
-      if (currentPoints.size() < 2) return;
-      int rad = std::max(1, thicknessSpin->value());
-      ns = new PillShape(currentPoints[0], currentPoints[1],
-                         rad, drawingColor, lineThickness, antiAliasEnabled);
+    if (currentPoints.size() < 2)
+      return;
+    int rad = std::max(1, thicknessSpin->value());
+    ns = new PillShape(currentPoints[0], currentPoints[1], rad, drawingColor,
+                       lineThickness, antiAliasEnabled);
   }
   if (!ns)
     return;
@@ -544,16 +541,22 @@ void DrawingWidget::selectShapeAt(const QPoint &pos) {
         return;
       }
     } else if (auto *Pill = dynamic_cast<PillShape *>(s)) {
-        if ((pos - Pill->p0).manhattanLength() < T) {
-            selectedShape = Pill;  hit = PillP0;  return;
-        }
-        if ((pos - Pill->p1).manhattanLength() < T) {
-            selectedShape = Pill;  hit = PillP1;  return;
-        }
-        double d = distToSegment(Pill->p0, Pill->p1);
-        if (d < T) {
-            selectedShape = Pill;  hit = PolyBody;  return;
-        }
+      if ((pos - Pill->p0).manhattanLength() < T) {
+        selectedShape = Pill;
+        hit = PillP0;
+        return;
+      }
+      if ((pos - Pill->p1).manhattanLength() < T) {
+        selectedShape = Pill;
+        hit = PillP1;
+        return;
+      }
+      double d = distToSegment(Pill->p0, Pill->p1);
+      if (d < T) {
+        selectedShape = Pill;
+        hit = PolyBody;
+        return;
+      }
     }
   }
 }

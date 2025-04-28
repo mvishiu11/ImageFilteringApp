@@ -123,81 +123,80 @@ void drawCircleWu(QImage &im, int xc, int yc, int r, const QColor &col) {
   double err = 0.0;
 
   while (x >= y) {
-      double xReal = std::sqrt(r*r - y*y);
-      double xCeil = std::ceil(xReal);
-      double D = xCeil - xReal;
+    double xReal = std::sqrt(r * r - y * y);
+    double xCeil = std::ceil(xReal);
+    double D = xCeil - xReal;
 
-      circlePlot(im, xc, yc, int(xCeil), int(y),      1.0 - D, col);
-      circlePlot(im, xc, yc, int(xCeil) - 1, int(y),  D,       col);
+    circlePlot(im, xc, yc, int(xCeil), int(y), 1.0 - D, col);
+    circlePlot(im, xc, yc, int(xCeil) - 1, int(y), D, col);
 
-      ++y;
+    ++y;
   }
 }
 
 /* ---------- Half-circle --------------------------- */
-static inline bool outsideHalf(int x,int y,int xc,int yc,
-                               double nx,double ny)
-{
-    return (x-xc)*nx + (y-yc)*ny >= 0;
+static inline bool outsideHalf(int x, int y, int xc, int yc, double nx,
+                               double ny) {
+  return (x - xc) * nx + (y - yc) * ny >= 0;
 }
 
 /* Mid-point (aliased) */
-void drawHalfCircleMidpoint(QImage& im,int xc,int yc,int r,
-                            double nx,double ny,const QColor& col)
-{
-    int x=0, y=r, d=1-r;
-    while(x<=y){
-        auto trySet=[&](int px,int py){
-            if(outsideHalf(px,py,xc,yc,nx,ny))
-                setPixelSafe(im,px,py,col);
-        };
-        trySet(xc+x,yc+y); trySet(xc-x,yc+y);
-        trySet(xc+x,yc-y); trySet(xc-x,yc-y);
-        trySet(xc+y,yc+x); trySet(xc-y,yc+x);
-        trySet(xc+y,yc-x); trySet(xc-y,yc-x);
+void drawHalfCircleMidpoint(QImage &im, int xc, int yc, int r, double nx,
+                            double ny, const QColor &col) {
+  int x = 0, y = r, d = 1 - r;
+  while (x <= y) {
+    auto trySet = [&](int px, int py) {
+      if (outsideHalf(px, py, xc, yc, nx, ny))
+        setPixelSafe(im, px, py, col);
+    };
+    trySet(xc + x, yc + y);
+    trySet(xc - x, yc + y);
+    trySet(xc + x, yc - y);
+    trySet(xc - x, yc - y);
+    trySet(xc + y, yc + x);
+    trySet(xc - y, yc + x);
+    trySet(xc + y, yc - x);
+    trySet(xc - y, yc - x);
 
-        d<0 ? d+=2*x+3 : (d+=2*(x-y)+5,--y);
-        ++x;
-    }
+    d < 0 ? d += 2 * x + 3 : (d += 2 * (x - y) + 5, --y);
+    ++x;
+  }
 }
 
 /* Wu (antialiased)*/
-static inline void halfCirclePlotAA(QImage &im,int xc,int yc,
-                                    int x,int y,double a,
-                                    double nx,double ny,
-                                    const QColor &c)
-{
-    auto tryBlend=[&](int px,int py,double alpha){
-        if( (px-xc)*nx + (py-yc)*ny >= 0 )
-            blend(im,px,py,alpha,c);
-    };
+static inline void halfCirclePlotAA(QImage &im, int xc, int yc, int x, int y,
+                                    double a, double nx, double ny,
+                                    const QColor &c) {
+  auto tryBlend = [&](int px, int py, double alpha) {
+    if ((px - xc) * nx + (py - yc) * ny >= 0)
+      blend(im, px, py, alpha, c);
+  };
 
-    tryBlend(xc+ x ,yc+ y ,a);
-    tryBlend(xc- x ,yc+ y ,a);
-    tryBlend(xc+ x ,yc- y ,a);
-    tryBlend(xc- x ,yc- y ,a);
-    tryBlend(xc+ y ,yc+ x ,a);
-    tryBlend(xc- y ,yc+ x ,a);
-    tryBlend(xc+ y ,yc- x ,a);
-    tryBlend(xc- y ,yc- x ,a);
+  tryBlend(xc + x, yc + y, a);
+  tryBlend(xc - x, yc + y, a);
+  tryBlend(xc + x, yc - y, a);
+  tryBlend(xc - x, yc - y, a);
+  tryBlend(xc + y, yc + x, a);
+  tryBlend(xc - y, yc + x, a);
+  tryBlend(xc + y, yc - x, a);
+  tryBlend(xc - y, yc - x, a);
 }
 
-void drawHalfCircleWu(QImage &im,int xc,int yc,int r,
-                      double nx,double ny,const QColor &col)
-{
-    if(r<=0) return;
+void drawHalfCircleWu(QImage &im, int xc, int yc, int r, double nx, double ny,
+                      const QColor &col) {
+  if (r <= 0)
+    return;
 
-    for(int y=0; y<=r; ++y)
-    {
-        /* exactly the same math as the full-circle Wu */
-        double xReal = std::sqrt(r*r - y*y);
-        int    xInt  = int(std::floor(xReal));
-        double D     = xReal - xInt;          // fractional part
+  for (int y = 0; y <= r; ++y) {
+    /* exactly the same math as the full-circle Wu */
+    double xReal = std::sqrt(r * r - y * y);
+    int xInt = int(std::floor(xReal));
+    double D = xReal - xInt; // fractional part
 
-        /* left pixel (xInt) gets weight 1-D, right one (xInt+1) gets D */
-        halfCirclePlotAA(im,xc,yc, xInt+1, y, D     , nx,ny, col);
-        halfCirclePlotAA(im,xc,yc, xInt   , y, 1.0-D, nx,ny, col);
-    }
+    /* left pixel (xInt) gets weight 1-D, right one (xInt+1) gets D */
+    halfCirclePlotAA(im, xc, yc, xInt + 1, y, D, nx, ny, col);
+    halfCirclePlotAA(im, xc, yc, xInt, y, 1.0 - D, nx, ny, col);
+  }
 }
 
 /* ---------- free‑hand ------------------------------------------------- */
