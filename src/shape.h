@@ -61,6 +61,42 @@ public:
   void write(QDataStream &) const override;
   void read(QDataStream &) override;
   QVector<QPoint> vertices;
+  QColor fill = Qt::transparent;
+  bool hasImage = false;
+  QString imagePath;
+  QImage sample;
+};
+
+class RectangleShape : public Shape {
+public:
+  RectangleShape() = default;
+  RectangleShape(const QPoint &c1, const QPoint &c2, const QColor &edge,
+                 bool aa)
+      : Shape(edge, 1, aa), p1(c1), p2(c2) {}
+
+  void draw(QImage &) const override;
+  void moveBy(int dx, int dy) override {
+    p1 += QPoint(dx, dy);
+    p2 += QPoint(dx, dy);
+  }
+  void write(QDataStream &out) const override {
+    out << p1 << p2 << drawingColor << fill << hasImage << imagePath
+        << useAntiAlias;
+  }
+  void read(QDataStream &in) override {
+    in >> p1 >> p2 >> drawingColor >> fill >> hasImage >> imagePath >>
+        useAntiAlias;
+    if (hasImage)
+      sample.load(imagePath);
+  }
+
+  /* extra data for filling */
+  QColor fill = Qt::transparent; // no fill → transparent
+  bool hasImage = false;
+  QString imagePath;
+  QImage sample;
+
+  QPoint p1, p2; // opposite corners
 };
 
 class PillShape : public Shape {

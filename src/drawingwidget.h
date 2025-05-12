@@ -18,6 +18,7 @@ enum DrawingMode {
   DM_ThickLine,
   DM_Circle,
   DM_Polygon,
+  DM_Rectangle,
   DM_Pen,
   DM_Pill,
   DM_Selection
@@ -50,6 +51,7 @@ private slots:
   void onAntiAliasToggled(bool);
   void onClearButtonClicked();
   void onDeleteButtonClicked();
+  void updateClipButton();
 
 private:
   /* gui widgets */
@@ -60,6 +62,7 @@ private:
   QCheckBox *antiAliasCheck;
   QPushButton *clearButton, *deleteButton;
   QSlider *zoomSlider;
+  QPushButton *clipBtn;
 
   /* persistent canvas + shapes */
   QImage canvas;
@@ -88,7 +91,11 @@ private:
     PolyVertex,
     PolyBody,
     PillP0,
-    PillP1
+    PillP1,
+    RectP1,
+    RectP2,
+    RectEdge,
+    RectBody
   };
   HitType hit = None;
   int hitIndex = -1;
@@ -101,4 +108,7 @@ private:
   void moveSelectedShape(const QPoint &);
   void redrawAllShapes();
 };
+
+extern QList<RectangleShape *> gClipRects;
+
 #endif

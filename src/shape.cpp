@@ -51,6 +51,12 @@ void PolygonShape::draw(QImage &im) const {
   if (vertices.size() < 2)
     return;
   int h = lineThickness / 2;
+  if (fill != Qt::transparent || hasImage) {
+    if (hasImage)
+      fillPolygonET(im, vertices, &sample);
+    else
+      fillPolygonET(im, vertices, fill);
+  }
   for (int i = 0; i < vertices.size(); ++i) {
     QPoint a = vertices[i], b = vertices[(i + 1) % vertices.size()];
     for (int off = -h; off <= h; ++off) {
@@ -60,23 +66,63 @@ void PolygonShape::draw(QImage &im) const {
         drawLineDDA(im, a.x(), a.y() + off, b.x(), b.y() + off, drawingColor);
     }
   }
+  extern QList<RectangleShape *> gClipRects;
+
+  for (RectangleShape *R : gClipRects) {
+    QRect rect(R->p1, R->p2);
+    for (int i = 0; i < vertices.size(); ++i) {
+      QPointF a = vertices[i], b = vertices[(i + 1) % vertices.size()];
+      QPointF A, B;
+      if (liangBarskyClip(rect, a, b, A, B))
+        drawLineDDA(im, int(A.x()), int(A.y()), int(B.x()), int(B.y()),
+                    Qt::red);
+    }
+  }
 }
 void PolygonShape::moveBy(int dx, int dy) {
   for (QPoint &pt : vertices)
     pt += QPoint(dx, dy);
 }
 void PolygonShape::write(QDataStream &out) const {
-  out << drawingColor << lineThickness << useAntiAlias;
+  out << drawingColor << fill << hasImage << imagePath << lineThickness
+      << useAntiAlias;
   out << quint32(vertices.size());
   for (const QPoint &pt : vertices)
     out << pt;
 }
 void PolygonShape::read(QDataStream &in) {
   quint32 n;
-  in >> drawingColor >> lineThickness >> useAntiAlias >> n;
+  in >> drawingColor >> fill >> hasImage >> imagePath >> lineThickness >>
+      useAntiAlias;
+  if (hasImage)
+    sample.load(imagePath);
   vertices.resize(n);
   for (auto &i : vertices)
     in >> i;
+}
+
+/* -------- RectangleShape ------------------------------------------------- */
+
+void RectangleShape::draw(QImage &im) const {
+  // outline
+  auto L = useAntiAlias ? drawLineWu : drawLineDDA;
+
+  QPoint a(p1.x(), p1.y()), b(p2.x(), p1.y()), c(p2.x(), p2.y()),
+      d(p1.x(), p2.y());
+
+  // fill if requested
+  if (fill != Qt::transparent || hasImage) {
+    QVector<QPoint> poly{a, b, c, d};
+    if (hasImage)
+      fillPolygonET(im, poly, &sample);
+    else
+      fillPolygonET(im, poly, fill);
+  }
+
+  L(im, a.x(), a.y(), b.x(), b.y(), drawingColor);
+  L(im, b.x(), b.y(), c.x(), c.y(), drawingColor);
+  L(im, c.x(), c.y(), d.x(), d.y(), drawingColor);
+  L(im, d.x(), d.y(), a.x(), a.y(), drawingColor);
 }
 
 /* -------- PillShape ------------------------------------------------- */
@@ -86,7 +132,7 @@ void PillShape::draw(QImage &im) const {
   auto drawCap = useAntiAlias ? drawHalfCircleWu : drawHalfCircleMidpoint;
 
   double vx = p1.x() - p0.x(), vy = p1.y() - p0.y();
-  double len = sqrt(vx*vx + vy*vy);
+  double len = sqrt(vx * vx + vy * vy);
   if (len == 0)
     return;
   double nx = -vy / len, ny = vx / len;

@@ -1,4 +1,5 @@
 #include "drawingengine.h"
+#include <QVector2D>
 #include <QtMath>
 #include <algorithm>
 
@@ -205,4 +206,132 @@ void drawFreehandPen(QImage &im, const QVector<QPoint> &pts,
   for (int i = 1; i < pts.size(); ++i)
     drawLineDDA(im, pts[i - 1].x(), pts[i - 1].y(), pts[i].x(), pts[i].y(),
                 col);
+}
+
+/* ================================================================ */
+/* Liang–Barsky clip (rectangle)                               */
+/* ================================================================ */
+static inline bool clipTest(double p, double q, double &t0, double &t1) {
+  if (q < 0.0 && p == 0)
+    return false;
+  double r = q / p;
+  if (p < 0) {
+    if (r > t1)
+      return false;
+    else if (r > t0)
+      t0 = r;
+  } else if (p > 0) {
+    if (r < t0)
+      return false;
+    else if (r < t1)
+      t1 = r;
+  } else if (q < 0)
+    return false;
+  return true;
+}
+
+bool liangBarskyClip(const QRect &R, QPointF p0, QPointF p1, QPointF &A,
+                     QPointF &B) {
+  double t0 = 0.0, t1 = 1.0;
+  double dx = p1.x() - p0.x();
+  double dy = p1.y() - p0.y();
+
+  if (clipTest(-dx, p0.x() - R.left(), t0, t1) &&
+      clipTest(dx, R.right() - p0.x(), t0, t1) &&
+      clipTest(-dy, p0.y() - R.top(), t0, t1) &&
+      clipTest(dy, R.bottom() - p0.y(), t0, t1)) {
+    A = {p0.x() + t0 * dx, p0.y() + t0 * dy};
+    B = {p0.x() + t1 * dx, p0.y() + t1 * dy};
+    return true;
+  }
+  return false;
+}
+
+/* ================================================================ */
+/* Edge-Table Scan-line fill                                   */
+/* ================================================================ */
+struct EdgeRec {
+  int yMax;
+  double x, invSlope;
+};
+
+static void bucketSortEdges(const QVector<QPoint> &P,
+                            QVector<QVector<EdgeRec>> &ET, int &yMin,
+                            int &yMax) {
+  int n = P.size();
+  yMin = INT_MAX;
+  yMax = INT_MIN;
+  for (int i = 0; i < n; ++i) {
+    QPoint a = P[i], b = P[(i + 1) % n];
+    if (a.y() == b.y())
+      continue;
+    if (a.y() > b.y())
+      std::swap(a, b);
+
+    EdgeRec e;
+    e.yMax = b.y();
+    e.x = a.x();
+    e.invSlope = double(b.x() - a.x()) / double(b.y() - a.y());
+
+    int k = a.y();
+    if (k < yMin)
+      yMin = k;
+    if (e.yMax > yMax)
+      yMax = e.yMax;
+    if (k >= 0 && k < ET.size())
+      ET[k].append(e);
+  }
+}
+
+static void scanlineFill(QImage &img, const QVector<QPoint> &P,
+             const QColor *colour,
+             const QImage *pattern)
+{
+  if (P.size() < 3)
+    return;
+  int H = img.height();
+  QVector<QVector<EdgeRec>> ET(H);
+  int yMin, yMax;
+  bucketSortEdges(P, ET, yMin, yMax);
+
+  QVector<EdgeRec> AET;
+
+  for (int y = yMin; y <= yMax; ++y) {
+    AET += ET[y];
+
+    for (int i = AET.size() - 1; i >= 0; --i)
+      if (AET[i].yMax == y)
+        AET.removeAt(i);
+
+    std::sort(AET.begin(), AET.end(),
+              [](const EdgeRec &a, const EdgeRec &b) { return a.x < b.x; });
+
+    for (int i = 0; i + 1 < AET.size(); i += 2) {
+      int x1 = int(std::ceil(AET[i].x));
+      int x2 = int(std::floor(AET[i + 1].x));
+      for (int x = x1; x <= x2; ++x) {
+        if (x < 0 || x >= img.width() || y < 0 || y >= H)
+          continue;
+        if (colour)
+          img.setPixel(x, y, colour->rgb());
+        else {
+          QRgb p = pattern->pixel(x % pattern->width(), y % pattern->height());
+          img.setPixel(x, y, p);
+        }
+      }
+    }
+
+    for (EdgeRec &e : AET)
+      e.x += e.invSlope;
+  }
+}
+
+void fillPolygonET(QImage &img, const QVector<QPoint> &P,
+                   const QColor &colour) {
+  scanlineFill(img, P, &colour, nullptr);
+}
+
+void fillPolygonET(QImage &img, const QVector<QPoint> &P,
+                   const QImage *pattern) {
+  scanlineFill(img, P, nullptr, pattern);
 }

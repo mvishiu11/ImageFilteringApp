@@ -23,4 +23,14 @@ void drawHalfCircleWu(QImage &img, int xc, int yc, int r, double nx, double ny,
 
 void drawFreehandPen(QImage &img, const QVector<QPoint> &points,
                      const QColor &color);
+
+/* ---------- clipping & filling -------------------------------------- */
+bool liangBarskyClip(const QRect &rect, QPointF p0, QPointF p1,
+                     QPointF &clippedA, QPointF &clippedB);
+
+void fillPolygonET(QImage &img, const QVector<QPoint> &P, const QColor &colour);
+
+void fillPolygonET(QImage &img, const QVector<QPoint> &P,
+                   const QImage *pattern);
+
 #endif

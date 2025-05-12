@@ -9,6 +9,16 @@
 #include <QToolButton>
 #include <cmath>
 
+QList<RectangleShape *> gClipRects;
+
+namespace {
+static constexpr const char* kClipEnabled =
+    "QPushButton{ background:#37b24d; color:white; font-weight:bold; }";
+
+static constexpr const char* kClipDisabled =
+    "QPushButton{ background:#adb5bd; color:#eeeeee; }";
+}
+
 DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   /* toolbar ---------------------------------------------------------- */
   toolbarWidget = new QWidget(this);
@@ -26,6 +36,7 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   modeSelector->addItem("Pen", DM_Pen);
   modeSelector->addItem("Pill", DM_Pill);
   modeSelector->addItem("Select", DM_Selection);
+  modeSelector->addItem("Rectangle", DM_Rectangle);
 
   thicknessSpin = new QSpinBox;
   thicknessSpin->setRange(1, 20);
@@ -69,6 +80,15 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   canvas = QImage(1000, 800, QImage::Format_RGB32);
   canvas.fill(Qt::white);
 
+  /* clipping --------------------------------------------------------- */
+
+  QPushButton *fillBtn = new QPushButton("Fill-Colour");
+  QPushButton *imgBtn = new QPushButton("Load Fill Img");
+  clipBtn = new QPushButton("Clip");
+  tl->addWidget(fillBtn);
+  tl->addWidget(imgBtn);
+  tl->addWidget(clipBtn);
+
   /* connections ------------------------------------------------------ */
   connect(modeSelector, SIGNAL(currentIndexChanged(int)), this,
           SLOT(onModeChanged(int)));
@@ -88,8 +108,56 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
     zoomFactor = v;
     update();
   });
+  connect(fillBtn, &QPushButton::clicked, this, [&] {
+    if (!selectedShape)
+      return;
+    QColor c = QColorDialog::getColor(Qt::yellow, this);
+    if (!c.isValid())
+      return;
+    if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
+      P->fill = c;
+      P->hasImage = false;
+      redrawAllShapes();
+      update();
+    } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
+      R->fill = c;
+      R->hasImage = false;
+      redrawAllShapes();
+      update();
+    }
+  });
+  connect(imgBtn, &QPushButton::clicked, this, [&] {
+    if (!selectedShape)
+      return;
+    QString fn = QFileDialog::getOpenFileName(this, "Image", "", "*.png *.jpg");
+    if (fn.isEmpty())
+      return;
+    QImage img(fn);
+    if (img.isNull())
+      return;
+    if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
+      P->sample = img;
+      P->hasImage = true;
+      P->imagePath = fn;
+    } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
+      R->sample = img;
+      R->hasImage = true;
+      R->imagePath = fn;
+    }
+    redrawAllShapes();
+    update();
+  });
+  connect(clipBtn, &QPushButton::clicked, this, [&] {
+    gClipRects.clear();
+    for (Shape *s : shapes)
+      if (auto *R = dynamic_cast<RectangleShape *>(s))
+        gClipRects.append(R);
+    redrawAllShapes();
+    update();
+  });
 
   setMouseTracking(true);
+  updateClipButton();
 }
 
 DrawingWidget::~DrawingWidget() { qDeleteAll(shapes); }
@@ -159,6 +227,10 @@ void DrawingWidget::saveShapes() {
       out << quint8(4);
       s->write(out);
     }
+    if (dynamic_cast<RectangleShape *>(s)) {
+      out << quint8(5);
+      s->write(out);
+    }
   }
 }
 
@@ -189,6 +261,8 @@ void DrawingWidget::loadShapes() {
       s = new PolygonShape;
     if (t == 4)
       s = new PillShape;
+    if (t == 5)
+      s = new RectangleShape;
     if (!s) {
       f.close();
       return;
@@ -198,6 +272,7 @@ void DrawingWidget::loadShapes() {
     s->draw(canvas);
   }
   update();
+  updateClipButton();
 }
 
 void DrawingWidget::deleteSelectedShape() {
@@ -208,6 +283,7 @@ void DrawingWidget::deleteSelectedShape() {
   selectedShape = nullptr;
   redrawAllShapes();
   update();
+  updateClipButton();
 }
 
 /* ---- helpers --------------------------------------------------------- */
@@ -221,6 +297,22 @@ void DrawingWidget::redrawAllShapes() {
   canvas.fill(Qt::white);
   for (auto *s : shapes)
     s->draw(canvas);
+}
+
+void DrawingWidget::updateClipButton() {
+  if (!clipBtn)
+    return;
+  int nWin = 0, nPoly = 0;
+  for (Shape *s : shapes) {
+    if (dynamic_cast<RectangleShape *>(s))
+      ++nWin;
+    else if (dynamic_cast<PolygonShape *>(s))
+      ++nPoly;
+  }
+  bool ok = (nWin && nPoly);
+  clipBtn->setEnabled(ok);
+  clipBtn->setStyleSheet(ok ? kClipEnabled : kClipDisabled);
+  clipBtn->setText(ok ? "Clip" : "No window / polygon");
 }
 
 /* ---- paintEvent ------------------------------------------------------- */
@@ -258,6 +350,10 @@ void DrawingWidget::paintEvent(QPaintEvent *) {
     } else if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
       for (const QPoint &pt : P->vertices)
         painter.drawEllipse(pt, 3, 3);
+    } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
+      painter.drawRect(QRect(R->p1, R->p2).normalized());
+      painter.drawEllipse(R->p1, 3, 3);
+      painter.drawEllipse(R->p2, 3, 3);
     }
   }
   drawPreview(painter);
@@ -299,6 +395,10 @@ void DrawingWidget::drawPreview(QPainter &p) {
     PillShape tmpShape(currentPoints[0], currentPoints[1], rad, drawingColor,
                        lineThickness, antiAliasEnabled);
     tmpShape.draw(tmp); // draw on the temporary image
+  } else if (currentMode == DM_Rectangle && currentPoints.size() >= 2) {
+    RectangleShape tmpShape(currentPoints[0], currentPoints[1], drawingColor,
+                            antiAliasEnabled);
+    tmpShape.draw(tmp);
   }
   if (currentMode == DM_Polygon && currentPoints.size() >= 2) {
     QPainter tp(&tmp);
@@ -342,6 +442,7 @@ void DrawingWidget::mousePressEvent(QMouseEvent *ev) {
 
 void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
   QPoint pos = mapToCanvas(ev->pos());
+  const int T = 7;
   if (currentMode == DM_Selection && selectedShape &&
       (ev->buttons() & Qt::LeftButton)) {
     QPoint delta = pos - lastMousePos;
@@ -374,6 +475,29 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
         Pill->p1 += delta;
       else if (hit == PolyBody)
         Pill->moveBy(delta.x(), delta.y()); // move whole pill
+    } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
+      if (hit == RectP1) // drag first corner
+        R->p1 += delta;
+      else if (hit == RectP2) // drag opposite corner
+        R->p2 += delta;
+      else if (hit == RectEdge) { // move edge ⇒ stretch orthogonally
+        // decide whether horizontal or vertical edge was grabbed
+        QRect box(R->p1, R->p2);
+        box = box.normalized();
+        bool grabTop = qAbs(lastMousePos.y() - box.top()) < T;
+        bool grabBot = qAbs(lastMousePos.y() - box.bottom()) < T;
+        bool grabLeft = qAbs(lastMousePos.x() - box.left()) < T;
+        bool grabRight = qAbs(lastMousePos.x() - box.right()) < T;
+
+        if (grabTop || grabBot) {
+          R->p1.ry() += delta.y();
+        }
+        if (grabLeft || grabRight) {
+          R->p1.rx() += delta.x();
+        }
+        // keep p2 fixed if we moved p1 and vice-versa
+      } else if (hit == RectBody) // translate whole rectangle
+        R->moveBy(delta.x(), delta.y());
     }
     redrawAllShapes();
     update();
@@ -470,11 +594,17 @@ void DrawingWidget::commitCurrentShape() {
     int rad = std::max(1, thicknessSpin->value());
     ns = new PillShape(currentPoints[0], currentPoints[1], rad, drawingColor,
                        lineThickness, antiAliasEnabled);
+  } else if (currentMode == DM_Rectangle) {
+    if (currentPoints.size() < 2)
+      return;
+    ns = new RectangleShape(currentPoints[0], currentPoints[1], drawingColor,
+                            antiAliasEnabled);
   }
   if (!ns)
     return;
   ns->draw(canvas);
   shapes.append(ns);
+  updateClipButton();
 }
 
 /* ---- selection helpers ----------------------------------------------- */
@@ -555,6 +685,38 @@ void DrawingWidget::selectShapeAt(const QPoint &pos) {
       if (d < T) {
         selectedShape = Pill;
         hit = PolyBody;
+        return;
+      }
+    } else if (auto *R = dynamic_cast<RectangleShape *>(s)) {
+      QPoint tl = R->p1, br = R->p2; // not guaranteed ordering
+      QRect box(tl, br);
+      box = box.normalized();
+      QPoint tr(box.right(), box.top());
+      QPoint bl(box.left(), box.bottom());
+
+      /* 2.1 corners (handles) ------------------------------------ */
+      if ((pos - box.topLeft()).manhattanLength() < T) {
+        selectedShape = R;
+        hit = RectP1;
+        return;
+      }
+      if ((pos - box.bottomRight()).manhattanLength() < T) {
+        selectedShape = R;
+        hit = RectP2;
+        return;
+      }
+      /* 2.2 edges ------------------------------------------------- */
+      auto dSeg = [&](QPoint a, QPoint b) { return distToSegment(a, b); };
+      if (dSeg(box.topLeft(), tr) < T || dSeg(tr, box.bottomRight()) < T ||
+          dSeg(box.bottomRight(), bl) < T || dSeg(bl, box.topLeft()) < T) {
+        selectedShape = R;
+        hit = RectEdge;
+        return;
+      }
+      /* 2.3 interior --------------------------------------------- */
+      if (box.adjusted(-T, -T, T, T).contains(pos)) {
+        selectedShape = R;
+        hit = RectBody;
         return;
       }
     }
