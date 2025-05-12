@@ -284,9 +284,7 @@ static void bucketSortEdges(const QVector<QPoint> &P,
 }
 
 static void scanlineFill(QImage &img, const QVector<QPoint> &P,
-             const QColor *colour,
-             const QImage *pattern)
-{
+                         const QColor *colour, const QImage *pattern) {
   if (P.size() < 3)
     return;
   int H = img.height();

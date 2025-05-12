@@ -12,12 +12,12 @@
 QList<RectangleShape *> gClipRects;
 
 namespace {
-static constexpr const char* kClipEnabled =
+static constexpr const char *kClipEnabled =
     "QPushButton{ background:#37b24d; color:white; font-weight:bold; }";
 
-static constexpr const char* kClipDisabled =
+static constexpr const char *kClipDisabled =
     "QPushButton{ background:#adb5bd; color:#eeeeee; }";
-}
+} // namespace
 
 DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   /* toolbar ---------------------------------------------------------- */
@@ -199,6 +199,7 @@ void DrawingWidget::clearCanvas() {
   shapes.clear();
   selectedShape = nullptr;
   update();
+  updateClipButton();
 }
 
 void DrawingWidget::saveShapes() {
@@ -303,7 +304,7 @@ void DrawingWidget::updateClipButton() {
   if (!clipBtn)
     return;
   int nWin = 0, nPoly = 0;
-  for (Shape *s : shapes) {
+  for (Shape *s : this->shapes) {
     if (dynamic_cast<RectangleShape *>(s))
       ++nWin;
     else if (dynamic_cast<PolygonShape *>(s))
@@ -470,18 +471,17 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
         P->moveBy(delta.x(), delta.y());
     } else if (auto *Pill = dynamic_cast<PillShape *>(selectedShape)) {
       if (hit == PillP0)
-        Pill->p0 += delta; // stretch / shrink
+        Pill->p0 += delta;
       else if (hit == PillP1)
         Pill->p1 += delta;
       else if (hit == PolyBody)
-        Pill->moveBy(delta.x(), delta.y()); // move whole pill
+        Pill->moveBy(delta.x(), delta.y());
     } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
-      if (hit == RectP1) // drag first corner
+      if (hit == RectP1)
         R->p1 += delta;
-      else if (hit == RectP2) // drag opposite corner
+      else if (hit == RectP2)
         R->p2 += delta;
-      else if (hit == RectEdge) { // move edge ⇒ stretch orthogonally
-        // decide whether horizontal or vertical edge was grabbed
+      else if (hit == RectEdge) {
         QRect box(R->p1, R->p2);
         box = box.normalized();
         bool grabTop = qAbs(lastMousePos.y() - box.top()) < T;
@@ -495,8 +495,7 @@ void DrawingWidget::mouseMoveEvent(QMouseEvent *ev) {
         if (grabLeft || grabRight) {
           R->p1.rx() += delta.x();
         }
-        // keep p2 fixed if we moved p1 and vice-versa
-      } else if (hit == RectBody) // translate whole rectangle
+      } else if (hit == RectBody)
         R->moveBy(delta.x(), delta.y());
     }
     redrawAllShapes();
@@ -558,6 +557,7 @@ void DrawingWidget::mouseDoubleClickEvent(QMouseEvent *ev) {
       selectedShape = nullptr;
       redrawAllShapes();
       update();
+      updateClipButton();
     }
   }
 }
