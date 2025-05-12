@@ -79,26 +79,33 @@ void PolygonShape::draw(QImage &im) const {
     }
   }
 }
+
 void PolygonShape::moveBy(int dx, int dy) {
   for (QPoint &pt : vertices)
     pt += QPoint(dx, dy);
 }
+
 void PolygonShape::write(QDataStream &out) const {
   out << drawingColor << fill << hasImage << imagePath << lineThickness
       << useAntiAlias;
+
   out << quint32(vertices.size());
   for (const QPoint &pt : vertices)
     out << pt;
 }
+
 void PolygonShape::read(QDataStream &in) {
-  quint32 n;
+  quint32 nVerts = 0;
+
   in >> drawingColor >> fill >> hasImage >> imagePath >> lineThickness >>
-      useAntiAlias;
+      useAntiAlias >> nVerts;
+
+  vertices.resize(nVerts);
+  for (QPoint &pt : vertices)
+    in >> pt;
+
   if (hasImage)
     sample.load(imagePath);
-  vertices.resize(n);
-  for (auto &i : vertices)
-    in >> i;
 }
 
 /* -------- RectangleShape ------------------------------------------------- */
@@ -123,6 +130,17 @@ void RectangleShape::draw(QImage &im) const {
   L(im, b.x(), b.y(), c.x(), c.y(), drawingColor);
   L(im, c.x(), c.y(), d.x(), d.y(), drawingColor);
   L(im, d.x(), d.y(), a.x(), a.y(), drawingColor);
+}
+
+void RectangleShape::write(QDataStream &out) const {
+  out << p1 << p2 << drawingColor << fill << hasImage << imagePath
+      << useAntiAlias;
+}
+void RectangleShape::read(QDataStream &in) {
+  in >> p1 >> p2 >> drawingColor >> fill >> hasImage >> imagePath >>
+      useAntiAlias;
+  if (hasImage)
+    sample.load(imagePath);
 }
 
 /* -------- PillShape ------------------------------------------------- */

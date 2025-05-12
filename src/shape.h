@@ -79,24 +79,15 @@ public:
     p1 += QPoint(dx, dy);
     p2 += QPoint(dx, dy);
   }
-  void write(QDataStream &out) const override {
-    out << p1 << p2 << drawingColor << fill << hasImage << imagePath
-        << useAntiAlias;
-  }
-  void read(QDataStream &in) override {
-    in >> p1 >> p2 >> drawingColor >> fill >> hasImage >> imagePath >>
-        useAntiAlias;
-    if (hasImage)
-      sample.load(imagePath);
-  }
+  void write(QDataStream &) const override;
+  void read(QDataStream &) override;
 
-  /* extra data for filling */
-  QColor fill = Qt::transparent; // no fill → transparent
+  QColor fill = Qt::transparent;
   bool hasImage = false;
   QString imagePath;
   QImage sample;
 
-  QPoint p1, p2; // opposite corners
+  QPoint p1, p2;
 };
 
 class PillShape : public Shape {
