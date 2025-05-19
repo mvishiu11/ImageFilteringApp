@@ -2,6 +2,7 @@
 #include <QVector2D>
 #include <QtMath>
 #include <algorithm>
+#include <queue>
 
 /* ---------- low‑level helpers ---------------------------------------- */
 static inline void setPixelSafe(QImage &im, int x, int y, const QColor &c) {
@@ -321,6 +322,66 @@ static void scanlineFill(QImage &img, const QVector<QPoint> &P,
 
     for (EdgeRec &e : AET)
       e.x += e.invSlope;
+  }
+}
+
+/* --------------- Smith scan-line fill ------------------ */
+void fillSeedScanline(QImage &img, int sx, int sy, const QColor *fillCol,
+                      const QImage *pattern) {
+  if (sx < 0 || sy < 0 || sx >= img.width() || sy >= img.height())
+    return;
+
+  const QRgb target = img.pixel(sx, sy);
+  if ((fillCol && target == fillCol->rgb()) ||
+      (pattern &&
+       target == pattern->pixel(sx % pattern->width(), sy % pattern->height())))
+    return;
+
+  struct Span {
+    int xL, xR, y;
+  };
+  std::queue<Span> q;
+  q.push({sx, sx, sy});
+
+  auto isTarget = [&](int x, int y) {
+    return x >= 0 && x < img.width() && y >= 0 && y < img.height() &&
+           img.pixel(x, y) == target;
+  };
+
+  auto setPixel = [&](int x, int y) {
+    if (fillCol)
+      img.setPixel(x, y, fillCol->rgb());
+    else
+      img.setPixel(x, y,
+                   pattern->pixel(x % pattern->width(), y % pattern->height()));
+  };
+
+  while (!q.empty()) {
+    Span s = q.front();
+    q.pop();
+
+    int xL = s.xL, xR = s.xR, y = s.y;
+    while (xL - 1 >= 0 && isTarget(xL - 1, y))
+      --xL;
+    while (xR + 1 < img.width() && isTarget(xR + 1, y))
+      ++xR;
+
+    for (int x = xL; x <= xR; ++x)
+      setPixel(x, y);
+
+    for (int dir : {-1, +1}) {
+      int ny = y + dir;
+      int x = xL;
+      while (x <= xR) {
+        while (x <= xR && !isTarget(x, ny))
+          ++x;
+        int start = x;
+        while (x <= xR && isTarget(x, ny))
+          ++x;
+        if (start < x)
+          q.push({start, x - 1, ny});
+      }
+    }
   }
 }
 

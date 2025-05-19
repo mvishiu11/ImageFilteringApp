@@ -37,6 +37,7 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
   modeSelector->addItem("Pill", DM_Pill);
   modeSelector->addItem("Select", DM_Selection);
   modeSelector->addItem("Rectangle", DM_Rectangle);
+  modeSelector->addItem("Fill", DM_Fill);
 
   thicknessSpin = new QSpinBox;
   thicknessSpin->setRange(1, 20);
@@ -126,27 +127,41 @@ DrawingWidget::DrawingWidget(QWidget *parent) : QWidget(parent) {
       update();
     }
   });
+
   connect(imgBtn, &QPushButton::clicked, this, [&] {
-    if (!selectedShape)
-      return;
-    QString fn = QFileDialog::getOpenFileName(this, "Image", "", "*.png *.jpg");
-    if (fn.isEmpty())
-      return;
-    QImage img(fn);
-    if (img.isNull())
-      return;
-    if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
-      P->sample = img;
-      P->hasImage = true;
-      P->imagePath = fn;
-    } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
-      R->sample = img;
-      R->hasImage = true;
-      R->imagePath = fn;
+    if (selectedShape) {
+      QString fn =
+          QFileDialog::getOpenFileName(this, "Image", "", "*.png *.jpg");
+      if (fn.isEmpty())
+        return;
+      QImage img(fn);
+      if (img.isNull())
+        return;
+      if (auto *P = dynamic_cast<PolygonShape *>(selectedShape)) {
+        P->sample = img;
+        P->hasImage = true;
+        P->imagePath = fn;
+      } else if (auto *R = dynamic_cast<RectangleShape *>(selectedShape)) {
+        R->sample = img;
+        R->hasImage = true;
+        R->imagePath = fn;
+      }
+      redrawAllShapes();
+      update();
+    } else {
+      /* no shape selected  → choose global seed-fill pattern */
+      QString fn = QFileDialog::getOpenFileName(this, "Seed-fill pattern", "",
+                                                "*.png *.jpg *.bmp");
+      if (fn.isEmpty())
+        return;
+
+      QImage pat(fn);
+      if (pat.isNull())
+        return;
+      seedPattern = pat;
     }
-    redrawAllShapes();
-    update();
   });
+
   connect(clipBtn, &QPushButton::clicked, this, [&] {
     gClipRects.clear();
     for (Shape *s : shapes)
@@ -176,6 +191,7 @@ void DrawingWidget::onColorButtonClicked() {
   QColor c = QColorDialog::getColor(drawingColor, this);
   if (c.isValid()) {
     drawingColor = c;
+    seedPattern = QImage();
     colorButton->setStyleSheet(
         QString("background-color:%1; color:white;").arg(c.name()));
   }
@@ -424,6 +440,19 @@ void DrawingWidget::mousePressEvent(QMouseEvent *ev) {
   if (currentMode == DM_Selection) {
     selectShapeAt(pos);
     lastMousePos = pos;
+    update();
+    return;
+  }
+  if (currentMode == DM_Fill) {
+    const QPoint c = mapToCanvas(ev->pos());
+
+    if (seedPattern.isNull())
+      fillSeedScanline(canvas, c.x(), c.y(), &drawingColor, nullptr);
+    else
+      fillSeedScanline(canvas, c.x(), c.y(), nullptr, &seedPattern);
+
+    for (Shape *s : shapes)
+      s->draw(canvas);
     update();
     return;
   }

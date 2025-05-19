@@ -21,7 +21,8 @@ enum DrawingMode {
   DM_Rectangle,
   DM_Pen,
   DM_Pill,
-  DM_Selection
+  DM_Selection,
+  DM_Fill
 };
 
 class DrawingWidget : public QWidget {
@@ -73,6 +74,7 @@ private:
   DrawingMode currentMode = DM_Line;
   int lineThickness = 1;
   QColor drawingColor = Qt::black;
+  QImage seedPattern;
   bool antiAliasEnabled = true;
   int zoomFactor = 1;
 

@@ -33,4 +33,7 @@ void fillPolygonET(QImage &img, const QVector<QPoint> &P, const QColor &colour);
 void fillPolygonET(QImage &img, const QVector<QPoint> &P,
                    const QImage *pattern);
 
+void fillSeedScanline(QImage &img, int sx, int sy, const QColor *fillCol,
+                      const QImage *pattern);
+
 #endif
