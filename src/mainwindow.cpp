@@ -22,12 +22,18 @@ MainWindow::MainWindow(QWidget *parent)
   // Create filtering page: Wrap existing filtering UI.
   // Assume ui->centralWidget contains your original filter UI (image labels,
   // sliders, etc.)
-  filteringPage = ui->centralwidget; // If using the designer's central widget.
+  filteringPage = ui->centralwidget;
   modeStack->addWidget(filteringPage);
 
   // Create the drawing page.
   drawingPage = new DrawingWidget(this);
   modeStack->addWidget(drawingPage);
+
+  cubePage = new CubeWidget(this);
+  modeStack->addWidget(cubePage);
+
+  cylinderPage = new CylinderWidget(this);
+  modeStack->addWidget(cylinderPage);
 
   // Set the stacked widget as the new central widget.
   setCentralWidget(modeStack);
@@ -36,11 +42,18 @@ MainWindow::MainWindow(QWidget *parent)
   QToolBar *modeToolBar = addToolBar(tr("Mode"));
   QAction *filterModeAction = modeToolBar->addAction(tr("Filter Mode"));
   QAction *drawModeAction = modeToolBar->addAction(tr("Draw Mode"));
+  QAction *cubeModeAction = modeToolBar->addAction(tr("3D Cube"));
+  QAction *cylinderModeAction = modeToolBar->addAction(tr("3D Textured Cylinder"));
 
   connect(filterModeAction, &QAction::triggered, this,
           &MainWindow::switchToFilterMode);
   connect(drawModeAction, &QAction::triggered, this,
           &MainWindow::switchToDrawMode);
+  connect(cubeModeAction, &QAction::triggered, this,
+          &MainWindow::switchToCubeMode);
+  connect(cylinderModeAction, &QAction::triggered, this,
+          &MainWindow::switchToCylinderMode);
+
 
   // Re-add your docks for filtering as before:
 
@@ -86,6 +99,12 @@ MainWindow::MainWindow(QWidget *parent)
   viewMenu->addAction(filterDock->toggleViewAction());
   viewMenu->addAction(dqWidget->toggleViewAction());
 
+  // texture menu actions
+  auto textureMenu = menuBar()->addMenu("Textures");
+  QAction *textureLoadAction = textureMenu->addAction(tr("Load Texture"));
+  connect(textureLoadAction, &QAction::triggered, this,
+          &MainWindow::loadTexture);
+
   connect(ui->actionLoad_Image, &QAction::triggered, this,
           &MainWindow::on_btnLoad_clicked);
   connect(ui->actionClose, &QAction::triggered, this, &MainWindow::close);
@@ -104,6 +123,19 @@ void MainWindow::switchToFilterMode() {
 
 void MainWindow::switchToDrawMode() {
   modeStack->setCurrentWidget(drawingPage);
+}
+
+void MainWindow::switchToCubeMode() {
+    modeStack->setCurrentWidget(cubePage);
+}
+
+void MainWindow::switchToCylinderMode() {
+    modeStack->setCurrentWidget(cylinderPage);
+}
+
+void MainWindow::loadTexture() {
+    QString fn = QFileDialog::getOpenFileName(this,tr("PNG"),"","PNG (*.png)");
+    static_cast<CylinderWidget*>(cylinderPage)->loadTexture(fn);
 }
 
 MainWindow::~MainWindow() { delete ui; }

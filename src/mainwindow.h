@@ -5,6 +5,8 @@
 #include "DitheringAndQuantizationWidget.h"
 #include "FunctionalEditorDock.h"
 #include "drawingwidget.h"
+#include "cubewidget.h"
+#include "cylinderwidget.h"
 #include <QImage>
 #include <QMainWindow>
 #include <QStackedWidget>
@@ -62,6 +64,11 @@ private slots:
   // Mode switching actions
   void switchToFilterMode();
   void switchToDrawMode();
+  void switchToCubeMode();
+  void switchToCylinderMode();
+
+  // texture load
+  void loadTexture();
 
 private:
   Ui::MainWindow *ui;
@@ -78,6 +85,8 @@ private:
   QStackedWidget *modeStack;  // Central widget that switches modes.
   QWidget *filteringPage;     // Container for filtering UI.
   DrawingWidget *drawingPage; // The drawing widget.
+  CubeWidget *cubePage;
+  CylinderWidget *cylinderPage;
 
   void displayImages();
 };
