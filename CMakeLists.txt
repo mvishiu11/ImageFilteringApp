@@ -36,6 +36,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         src/drawingengine.h src/drawingengine.cpp
         src/drawingwidget.h src/drawingwidget.cpp
         src/shape.h src/shape.cpp
+        src/cubewidget.h src/cubewidget.cpp
+        src/cylinderwidget.h src/cylinderwidget.cpp
+        src/cylindermesh.h
     )
 else()
     if(ANDROID)
