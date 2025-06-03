@@ -102,7 +102,7 @@ bool CylinderWidget::backFaceCam(const CamV& a,
     float dotProduct = QVector3D::dotProduct(normal, toCamera);
 
     // CORRECTED: Return true if facing AWAY from camera (negative dot product)
-    return dotProduct < 0.0f;  // Cull if facing away from camera
+    return dotProduct > 0.0f;  // Cull if facing away from camera
 }
 
 /* ---------- improved texture sampling with proper wrap ----------- */
@@ -225,6 +225,10 @@ void CylinderWidget::keyPressEvent(QKeyEvent *ev)
     else if(ev->key()==Qt::Key_C){
         enableCulling = !enableCulling;
         cullBox->setChecked(enableCulling);
+        update();
+    } else if(ev->key()==Qt::Key_A){
+        toggleAuto(true);
+        autoBox->toggle();
         update();
     }
     QWidget::keyPressEvent(ev);
