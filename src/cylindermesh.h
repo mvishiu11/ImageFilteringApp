@@ -4,62 +4,118 @@
 #include <QVector3D>
 #include "cylinderwidget.h"
 
-/* Builds a closed cylinder centred at (0,0,0) */
-/* radius=1 , height=2 , subdiv = n slices     */
+/* ------------------------------------------------------------------ */
+/* Toggle all diagnostics by (un)-defining this symbol once.          */
+#define CYL_DEBUG           /*  ← comment-out for normal build       */
+/* ------------------------------------------------------------------ */
+
+#ifndef CYL_DEBUG
+constexpr int CYL_SLICES = 40;     /* regular resolution             */
+#else
+constexpr int CYL_SLICES = 40;      /* just four quads – easy to see  */
+#endif
+
+/* Builds a closed cylinder centred at (0,0,0); radius = 1, height = 2
+   This completely rebuilt version ensures consistent winding order and eliminates artifacts */
 inline void makeCylinderMesh(QVector<Vtx>& vbo,
                              QVector<Tri>& ibo,
-                             int n = 40)
+                             int n = CYL_SLICES)
 {
     vbo.clear(); ibo.clear();
-    /* --- side vertices (2*n) -------------------------------------- */
+
+    /* STEP 1: Generate side vertices with careful attention to wrap-around
+     * We create exactly n+1 columns of vertices, where the last column
+     * is identical in position to the first, but has u=1.0 for texture wrapping */
+
+    for (int i = 0; i <= n; ++i) {
+        float theta = 2.0f * M_PI * float(i) / float(n);
+        float x = std::cos(theta);
+        float z = std::sin(theta);
+
+        // UV coordinates: u goes from 0 to 1 across the cylinder circumference
+        // v goes from 0 at bottom to 1 at top
+        float u = float(i) / float(n);  // This naturally gives u=1.0 for the wrap-around column
+
+        // Add bottom vertex (y = -1, v = 0)
+        vbo << Vtx{ {x, -1.0f, z}, {u, 0.0f} };
+
+        // Add top vertex (y = 1, v = 1)
+        vbo << Vtx{ {x, 1.0f, z}, {u, 1.0f} };
+    }
+
+    /* STEP 2: Generate side triangles with consistent counter-clockwise winding
+     * Critical insight: when viewed from outside the cylinder, vertices should
+     * appear in counter-clockwise order to create outward-facing normals */
+
+    for (int i = 0; i < n; ++i) {  // Note: only n quads, not n+1
+        // Calculate vertex indices for current quad
+        int bottomLeft  = 2 * i;        // Bottom vertex of current column
+        int topLeft     = 2 * i + 1;    // Top vertex of current column
+        int bottomRight = 2 * (i + 1);  // Bottom vertex of next column
+        int topRight    = 2 * (i + 1) + 1; // Top vertex of next column
+
+        // First triangle: bottom-left → bottom-right → top-left
+        // When viewed from outside, this creates counter-clockwise winding
+        ibo << Tri{bottomLeft, bottomRight, topLeft};
+
+        // Second triangle: top-left → bottom-right → top-right
+        // This also creates counter-clockwise winding from outside view
+        ibo << Tri{topLeft, bottomRight, topRight};
+    }
+
+    /* STEP 3: Create cap centers */
+    int topCenterIdx = vbo.size();
+    vbo << Vtx{ {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f} };  // Top cap center
+
+    int bottomCenterIdx = vbo.size();
+    vbo << Vtx{ {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f} };  // Bottom cap center
+
+    /* STEP 4: Create cap rim vertices with circular UV mapping */
+    int topRimStart = vbo.size();
     for (int i = 0; i < n; ++i) {
-        float th = 2.f * M_PI * i / n;
-        float x  = std::cos(th), z = std::sin(th);
-        float u  = i / float(n);          // last vertex gets u ≈ 1-1/n
-        vbo << Vtx{ {x,-1,z}, {u,1.f} }
-            << Vtx{ {x, 1,z}, {u,0.f} };
-    }
-    /* --- top & bottom centre verts -------------------------------- */
-    int idxTop = vbo.size();   vbo << Vtx{ {0, 1,0}, {0.25f,0.25f} };
-    int idxBot = vbo.size();   vbo << Vtx{ {0,-1,0}, {0.75f,0.25f} };
+        float theta = 2.0f * M_PI * float(i) / float(n);
+        float x = std::cos(theta);
+        float z = std::sin(theta);
 
-    /* --- top & bottom ring verts (n each) ------------------------- */
-    for(int i=0;i<n;++i){
-        float th = 2.f*M_PI*i/n;
-        float x = std::cos(th), z = std::sin(th);
-        float u = 0.25f*(1.f+ x);
-        float v = 0.25f*(1.f+ z);
-        vbo << Vtx{ {x, 1,z}, {u, v} }; // top
+        // Map to unit circle in texture space, centered at (0.5, 0.5)
+        float u = 0.5f + 0.4f * x;  // Scale by 0.4 to leave border
+        float v = 0.5f + 0.4f * z;
+
+        vbo << Vtx{ {x, 1.0f, z}, {u, v} };  // Top rim vertex
     }
 
-    for(int i=0;i<n;++i){
-        float th = 2.f*M_PI*i/n;
-        float x = std::cos(th), z = std::sin(th);
-        float u = 0.25f*(3.f+ x);
-        float v = 0.25f*(1.f+ z);
-        vbo << Vtx{ {x,-1,z}, {u, v} }; // bottom
-    }
-
-    /* --- side indices (quads -> 2 tris) --------------------------- */
+    int bottomRimStart = vbo.size();
     for (int i = 0; i < n; ++i) {
-        int a = 2 *  i;
-        int b = 2 * ((i + 1) % n);        // wrap last→first
-        int c = a + 1;
-        int d = b + 1;
-        ibo << Tri{a,b,c} << Tri{c,b,d};
+        float theta = 2.0f * M_PI * float(i) / float(n);
+        float x = std::cos(theta);
+        float z = std::sin(theta);
+
+        // Map to unit circle in texture space
+        float u = 0.5f + 0.4f * x;
+        float v = 0.5f + 0.4f * z;
+
+        vbo << Vtx{ {x, -1.0f, z}, {u, v} };  // Bottom rim vertex
     }
-    /* --- top ------------------------------------------------------ */
-    int baseTop = idxTop+1;
-    for(int i=0;i<n;++i){
-        int a = baseTop + i;
-        int b = baseTop + (i+1)%n;
-        ibo << Tri{ idxTop, a, b };
+
+    /* STEP 5: Create cap triangles with proper winding order
+     * Key insight: the caps need opposite winding because they face
+     * opposite directions (top cap faces up, bottom cap faces down) */
+
+    // Top cap triangles (viewed from above, counter-clockwise)
+    for (int i = 0; i < n; ++i) {
+        int current = topRimStart + i;
+        int next = topRimStart + ((i + 1) % n);  // Wrap around for last triangle
+
+        // Center → current → next creates outward-facing normal for top cap
+        ibo << Tri{topCenterIdx, current, next};
     }
-    /* --- bottom --------------------------------------------------- */
-    int baseBot = idxTop+1+n;
-    for(int i=0;i<n;++i){
-        int a = baseBot + i;
-        int b = baseBot + (i+1)%n;
-        ibo << Tri{ idxBot, b, a };      /* note winding for culling */
+
+    // Bottom cap triangles (viewed from below, counter-clockwise)
+    for (int i = 0; i < n; ++i) {
+        int current = bottomRimStart + i;
+        int next = bottomRimStart + ((i + 1) % n);  // Wrap around for last triangle
+
+        // Center → next → current creates outward-facing normal for bottom cap
+        ibo << Tri{bottomCenterIdx, next, current};
     }
 }
