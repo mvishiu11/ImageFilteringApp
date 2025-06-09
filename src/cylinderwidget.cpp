@@ -20,16 +20,16 @@ CylinderWidget::CylinderWidget(QWidget *parent) : QWidget(parent)
     sy = new QSlider(Qt::Horizontal);  sy->setRange(0,360); sy->setValue(int(rotY));
     sd = new QSlider(Qt::Horizontal);  sd->setRange(3,15);  sd->setValue(int(dist));
 
-    autoBox = new QCheckBox(tr("auto-rotate"));
+    autoBox = new QCheckBox(tr("Auto-rotate (A)"));
     wireBox = new QCheckBox(tr("Wireframe (W)"));  wireBox->setChecked(drawWire);
-    cullBox = new QCheckBox(tr("Culling (C)"));   cullBox->setChecked(enableCulling);  // New culling checkbox
+    cullBox = new QCheckBox(tr("Culling (C)"));   cullBox->setChecked(enableCulling);
 
     connect(sx,  &QSlider::valueChanged, this, &CylinderWidget::updateParams);
     connect(sy,  &QSlider::valueChanged, this, &CylinderWidget::updateParams);
     connect(sd,  &QSlider::valueChanged, this, &CylinderWidget::updateParams);
     connect(autoBox, &QCheckBox::toggled, this, &CylinderWidget::toggleAuto);
     connect(wireBox, &QCheckBox::toggled, this, [this](bool on){ drawWire=on; update(); });
-    connect(cullBox, &QCheckBox::toggled, this, [this](bool on){ enableCulling=on; update(); });  // New connection
+    connect(cullBox, &QCheckBox::toggled, this, [this](bool on){ enableCulling=on; update(); });
 
     tick.setInterval(30); connect(&tick, &QTimer::timeout, this, &CylinderWidget::stepAuto);
 
@@ -39,14 +39,14 @@ CylinderWidget::CylinderWidget(QWidget *parent) : QWidget(parent)
     lay->addWidget(new QLabel("dist"));  lay->addWidget(sd);
     lay->addWidget(autoBox);
     lay->addWidget(wireBox);
-    lay->addWidget(cullBox);  // Add culling checkbox to UI
+    lay->addWidget(cullBox);
     lay->addStretch(1);
 
     panel = new QWidget; panel->setLayout(lay); panel->setFixedWidth(140);
     auto *main = new QHBoxLayout(this); main->addWidget(panel); main->addStretch(1);
 }
 
-/* ========= build procedural mesh ================================= */
+/* ========= procedural mesh building ================================= */
 void CylinderWidget::buildCylinder(int slices) { makeCylinderMesh(vbo,ibo,slices); }
 
 /* ========= slot helpers ========================================== */
@@ -57,14 +57,145 @@ void CylinderWidget::toggleAuto(bool on){ on?tick.start():tick.stop(); }
 void CylinderWidget::stepAuto(){ sy->setValue((sy->value()+1)%360); }
 
 /* ========= matrices ============================================== */
+
+QMatrix4x4 createIdentity()
+{
+    QMatrix4x4 mat;
+    for(int row = 0; row < 4; ++row) {
+        for(int col = 0; col < 4; ++col) {
+            mat(row, col) = 0.0f;
+        }
+    }
+    mat(0, 0) = 1.0f;
+    mat(1, 1) = 1.0f;
+    mat(2, 2) = 1.0f;
+    mat(3, 3) = 1.0f;
+    return mat;
+}
+
+QMatrix4x4 createRotationX(float degrees)
+{
+    float radians = degrees * M_PI / 180.0f;
+    float c = std::cos(radians);
+    float s = std::sin(radians);
+
+    QMatrix4x4 mat;
+    mat.setToIdentity();
+
+    mat(1, 1) = c;   mat(1, 2) = -s;
+    mat(2, 1) = s;  mat(2, 2) = c;
+
+    return mat;
+}
+
+QMatrix4x4 createRotationY(float degrees)
+{
+    float radians = degrees * M_PI / 180.0f;
+    float c = std::cos(radians);
+    float s = std::sin(radians);
+
+    QMatrix4x4 mat;
+    mat.setToIdentity();
+
+    mat(0, 0) = c;   mat(0, 2) = s;
+    mat(2, 0) = -s;  mat(2, 2) = c;
+
+    return mat;
+}
+
+QMatrix4x4 createTranslation(float x, float y, float z)
+{
+    QMatrix4x4 mat;
+    mat.setToIdentity();
+
+    mat(0, 3) = x;
+    mat(1, 3) = y;
+    mat(2, 3) = z;
+
+    return mat;
+}
+
+QMatrix4x4 createFrustum(float left, float right, float bottom, float top, float near, float far)
+{
+    QMatrix4x4 mat;
+
+    float A = (right + left) / (right - left);
+    float B = (top + bottom) / (top - bottom);
+    float C = -(far + near) / (far - near);
+    float D = -(2.0f * far * near) / (far - near);
+
+    mat(0, 0) = (2.0f * near) / (right - left);
+    mat(0, 1) = 0.0f;
+    mat(0, 2) = A;
+    mat(0, 3) = 0.0f;
+
+    mat(1, 0) = 0.0f;
+    mat(1, 1) = (2.0f * near) / (top - bottom);
+    mat(1, 2) = B;
+    mat(1, 3) = 0.0f;
+
+    mat(2, 0) = 0.0f;
+    mat(2, 1) = 0.0f;
+    mat(2, 2) = C;
+    mat(2, 3) = D;
+
+    mat(3, 0) = 0.0f;
+    mat(3, 1) = 0.0f;
+    mat(3, 2) = -1.0f;
+    mat(3, 3) = 0.0f;
+
+    return mat;
+}
+
 void CylinderWidget::fillMatrices()
 {
-    M.setToIdentity();  M.rotate(rotX,{1,0,0}); M.rotate(rotY,{0,1,0});
-    V.setToIdentity();  V.translate(0,0,-dist);
-    float n=0.1f,f=100.f,fov=60.f, ar=float(CANVAS_W)/CANVAS_H;
-    float t=n*std::tan(fov*M_PI/360.0), r=t*ar;
-    P.setToIdentity();  P.frustum(-r,r,-t,t,n,f);
-    MVP = P*V*M;
+    QMatrix4x4 rotX_mat = createRotationX(rotX);
+    QMatrix4x4 rotY_mat = createRotationY(rotY);
+    M = rotX_mat * rotY_mat;
+
+    V = createTranslation(0.0f, 0.0f, -dist);
+
+    float n = 0.1f, f = 100.0f, fov = 60.0f;
+    float ar = float(CANVAS_W) / CANVAS_H;
+    float t = n * std::tan(fov * M_PI / 360.0f);
+    float r = t * ar;
+
+    P = createFrustum(-r, r, -t, t, n, f);
+
+    MVP = P * V * M;
+}
+
+/* ---------- back-face test ---------------- */
+bool CylinderWidget::backFaceCam(const CamV& a,
+                                 const CamV& b,
+                                 const CamV& c) const
+{
+    QVector3D ab = b.pos - a.pos;
+    QVector3D ac = c.pos - a.pos;
+    QVector3D normal = QVector3D::crossProduct(ab, ac);
+
+    QVector3D triangleCenter = (a.pos + b.pos + c.pos) / 3.0f;
+
+    QVector3D toCamera = -triangleCenter;
+
+    float dotProduct = QVector3D::dotProduct(normal, toCamera);
+
+    return dotProduct > 0.0f;
+}
+
+/* ---------- texture sampling ----------- */
+uint CylinderWidget::sampleTex(float u, float v) const
+{
+    u = u - std::floor(u);
+    v = v - std::floor(v);
+
+    int x = int(u * (texture.width() - 1));
+    int y = int(v * (texture.height() - 1));
+
+    x = qBound(0, x, texture.width() - 1);
+    y = qBound(0, y, texture.height() - 1);
+
+    return texture.pixel(x, y);
 }
 
 /* ========= projection helpers ==================================== */
@@ -72,67 +203,17 @@ Frag CylinderWidget::projectVertex(const Vtx& v) const
 {
     QVector4D hp = MVP * QVector4D(v.pos,1);
     float invW = 1.f/hp.w();
-    return { ( hp.x()*invW*0.5f +0.5f)*(CANVAS_W-1),
-            (-hp.y()*invW*0.5f +0.5f)*(CANVAS_H-1),
+    return { ( hp.x() * invW * 0.5f + 0.5f) * (CANVAS_W-1),
+            (-hp.y() * invW * 0.5f + 0.5f) * (CANVAS_H-1),
             invW,
-            v.uv.x()*invW,
-            v.uv.y()*invW };
-}
-
-/* ---------- corrected camera-space back-face test ---------------- */
-bool CylinderWidget::backFaceCam(const CamV& a,
-                                 const CamV& b,
-                                 const CamV& c) const
-{
-    // Calculate the face normal in camera space using cross product
-    // The order matters: this determines which direction is "outward"
-    QVector3D ab = b.pos - a.pos;
-    QVector3D ac = c.pos - a.pos;
-    QVector3D normal = QVector3D::crossProduct(ab, ac);
-
-    // Use the centroid of the triangle as a representative point
-    QVector3D triangleCenter = (a.pos + b.pos + c.pos) / 3.0f;
-
-    // In camera space, camera is at origin looking down negative Z
-    // Vector from triangle to camera is negative of triangle position
-    QVector3D toCamera = -triangleCenter;
-
-    // Key insight: if normal points toward camera, triangle faces camera (visible)
-    // If normal points away from camera, triangle faces away (should be culled)
-    float dotProduct = QVector3D::dotProduct(normal, toCamera);
-
-    // CORRECTED: Return true if facing AWAY from camera (negative dot product)
-    return dotProduct > 0.0f;  // Cull if facing away from camera
-}
-
-/* ---------- improved texture sampling with proper wrap ----------- */
-uint CylinderWidget::sampleTex(float u, float v) const
-{
-    // Improved wrapping - handle negative values properly and ensure smooth wrap-around
-    u = u - std::floor(u);  // This handles both positive and negative values correctly
-    v = v - std::floor(v);
-
-    // Ensure we're in valid range [0,1)
-    if (u < 0.0f) u += 1.0f;
-    if (v < 0.0f) v += 1.0f;
-    if (u >= 1.0f) u -= 1.0f;
-    if (v >= 1.0f) v -= 1.0f;
-
-    // Convert to texture coordinates
-    int x = int(u * (texture.width() - 1));   // Use width-1 to prevent overflow
-    int y = int(v * (texture.height() - 1));  // Use height-1 to prevent overflow
-
-    // Clamp to valid bounds as safety measure
-    x = qBound(0, x, texture.width() - 1);
-    y = qBound(0, y, texture.height() - 1);
-
-    return texture.pixel(x, y);
+            v.uv.x() * invW,     // TODO: Why do we multiply here?
+            v.uv.y() * invW };   // TODO: Just to divide later at pixel level?
 }
 
 /* ========= triangle fill / wire ================================== */
 void CylinderWidget::rasterTriangle(QImage& buf,const Frag& A,const Frag& B,const Frag& C)
 {
-    if (drawWire) {                       /* just three antialiased edges */
+    if (drawWire) {
         drawLineWu(buf,int(A.sx),int(A.sy),int(B.sx),int(B.sy),0xFF000000);
         drawLineWu(buf,int(B.sx),int(B.sy),int(C.sx),int(C.sy),0xFF000000);
         drawLineWu(buf,int(C.sx),int(C.sy),int(A.sx),int(A.sy),0xFF000000);
@@ -159,8 +240,9 @@ void CylinderWidget::rasterTriangle(QImage& buf,const Frag& A,const Frag& B,cons
             float w0=edge(B,C,x,y), w1=edge(C,A,x,y), w2=edge(A,B,x,y);
             if((w0*area)<0 || (w1*area)<0 || (w2*area)<0) continue;
 
-            w0/=area; w1/=area; w2/=area;
+            w0 /= area; w1 /= area; w2 /= area;
 
+            // TODO: Why is it divided here?
             float invW = w0*A.sz_w + w1*B.sz_w + w2*C.sz_w;
             float  u = (w0*A.u_w + w1*B.u_w + w2*C.u_w)/invW;
             float  v = (w0*A.v_w + w1*B.v_w + w2*C.v_w)/invW;
@@ -174,21 +256,18 @@ void CylinderWidget::drawScene(QImage& buf)
 {
     fillMatrices();
 
-    /* 1. project + keep eye-space copies */
     QVector<Frag> frag(vbo.size());
     QVector<CamV> cam (vbo.size());
-    QMatrix4x4 MV = V*M;                              // eye-space transform
+    QMatrix4x4 MV = V*M;
 
     for(int i=0;i<vbo.size();++i){
         frag[i] = projectVertex(vbo[i]);
         cam [i].pos = (MV * QVector4D(vbo[i].pos,1)).toVector3D();
     }
 
-    /* 2. triangles with proper backface culling */
     for(const Tri& t : ibo){
-        // Apply backface culling if enabled
         if(enableCulling && backFaceCam(cam[t.a],cam[t.b],cam[t.c])) {
-            continue;  // Skip back-facing triangles
+            continue;
         }
         rasterTriangle(buf, frag[t.a], frag[t.b], frag[t.c]);
     }

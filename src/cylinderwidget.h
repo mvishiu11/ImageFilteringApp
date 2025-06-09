@@ -12,10 +12,9 @@
 struct Vtx  { QVector3D pos; QVector2D uv; };
 struct Tri  { int a{}, b{}, c{}; };
 
-/* after MVP */
 struct Frag {
-    float sx{}, sy{}, sz_w{};          // screen x-y ; 1/w
-    float u_w{}, v_w{};                // perspective-correct u, v
+    float sx{}, sy{}, sz_w{};
+    float u_w{}, v_w{};
 };
 
 /* eye-space copy used only for culling */
@@ -32,7 +31,7 @@ protected:
     void paintEvent (QPaintEvent*) override;
     void wheelEvent (QWheelEvent*) override;
     void resizeEvent(QResizeEvent*) override;
-    void keyPressEvent(QKeyEvent *) override;      // ← 'W' shortcut
+    void keyPressEvent(QKeyEvent *) override;
 
 private slots:
     void updateParams();
@@ -60,7 +59,7 @@ private:
     /* UI widgets ---------------------------------------------------- */
     QWidget   *panel{};
     QSlider   *sx{}, *sy{}, *sd{};
-    QCheckBox *autoBox{}, *wireBox{}, *cullBox{};  // Added culling checkbox
+    QCheckBox *autoBox{}, *wireBox{}, *cullBox{};
     QTimer     tick;
     int        zoom{1};
 
@@ -72,5 +71,5 @@ private:
 
     /* run-time options --------------------------------------------- */
     bool drawWire = false;
-    bool enableCulling = true;  // Added culling toggle
+    bool enableCulling = true;
 };
